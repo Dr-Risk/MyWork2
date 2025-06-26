@@ -9,6 +9,7 @@ export interface UserProfile {
     name: string;
     initials: string;
     email: string;
+    isSuperUser?: boolean;
 }
 
 interface UserWithPassword extends UserProfile {
@@ -29,6 +30,7 @@ const initialUsers: { [key: string]: UserWithPassword } = {
     loginAttempts: 0,
     isLocked: false,
     passwordLastChanged: new Date().toISOString(),
+    isSuperUser: true,
   },
   'casey.white': {
     username: 'casey.white',
@@ -40,6 +42,7 @@ const initialUsers: { [key: string]: UserWithPassword } = {
     loginAttempts: 0,
     isLocked: false,
     passwordLastChanged: new Date().toISOString(),
+    isSuperUser: false,
   },
   'john.doe': {
     username: 'john.doe',
@@ -51,6 +54,7 @@ const initialUsers: { [key: string]: UserWithPassword } = {
     loginAttempts: 0,
     isLocked: false,
     passwordLastChanged: new Date(new Date().setDate(new Date().getDate() - 91)).toISOString(),
+    isSuperUser: false,
   }
 };
 
@@ -87,6 +91,7 @@ export const createUser = async (userData: CreateUserInput): Promise<{ success: 
         loginAttempts: 0,
         isLocked: false,
         passwordLastChanged: new Date().toISOString(),
+        isSuperUser: false,
     };
 
     console.log(`User '${userData.username}' created in mock database.`);
@@ -222,3 +227,23 @@ export const updateUserPassword = async (
 
     return { success: true, message: "Password updated successfully." };
 }
+
+export const updateUserSuperUserStatus = async (
+  username: string,
+  isSuperUser: boolean
+): Promise<{ success: boolean; message: string }> => {
+  const user = users[username];
+
+  if (!user) {
+    return { success: false, message: 'User not found.' };
+  }
+
+  if (user.role === 'admin') {
+    return { success: false, message: 'Cannot change super user status for an admin.' };
+  }
+
+  user.isSuperUser = isSuperUser;
+  console.log(`User '${username}' super user status updated to '${isSuperUser}' in mock database.`);
+
+  return { success: true, message: 'Super user status updated successfully.' };
+};

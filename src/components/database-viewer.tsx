@@ -17,7 +17,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { getUsers, updateUserRole, type SanitizedUser } from '@/lib/auth';
+import { getUsers, updateUserRole, type SanitizedUser, updateUserSuperUserStatus } from '@/lib/auth';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Database } from 'lucide-react';
@@ -29,6 +29,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
+import { Switch } from '@/components/ui/switch';
 
 export function DatabaseViewer() {
   const [users, setUsers] = useState<SanitizedUser[]>([]);
@@ -77,6 +78,30 @@ export function DatabaseViewer() {
     }
   };
 
+  const handleSuperUserChange = async (
+    username: string,
+    isSuperUser: boolean
+  ) => {
+    const response = await updateUserSuperUserStatus(username, isSuperUser);
+
+    if (response.success) {
+        toast({
+            title: "Success",
+            description: response.message,
+        });
+        await fetchUsers();
+    } else {
+        toast({
+            variant: "destructive",
+            title: "Error",
+            description: response.message,
+        });
+        // We need to refetch to revert the switch state visually on failure
+        await fetchUsers(); 
+    }
+  };
+
+
   return (
     <Card className="mt-6">
       <CardHeader>
@@ -104,6 +129,7 @@ export function DatabaseViewer() {
                 <TableRow>
                   <TableHead>Username</TableHead>
                   <TableHead>Role</TableHead>
+                  <TableHead>Super User</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Email</TableHead>
                   <TableHead>Password Last Changed</TableHead>
@@ -116,6 +142,20 @@ export function DatabaseViewer() {
                     <TableCell className="font-medium">{user.username}</TableCell>
                     <TableCell>
                       <Badge variant="secondary">{user.role}</Badge>
+                    </TableCell>
+                    <TableCell>
+                      {user.role !== 'admin' ? (
+                          <div className="flex items-center">
+                              <Switch
+                                  id={`superuser-switch-${user.username}`}
+                                  checked={!!user.isSuperUser}
+                                  onCheckedChange={(checked) => handleSuperUserChange(user.username, checked)}
+                                  aria-label={`Toggle super user status for ${user.username}`}
+                              />
+                          </div>
+                      ) : (
+                          <Badge variant="outline">N/A</Badge>
+                      )}
                     </TableCell>
                     <TableCell>
                       {user.isLocked ? (

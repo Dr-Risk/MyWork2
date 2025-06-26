@@ -13,12 +13,12 @@ export default function DeveloperPage() {
   const router = useRouter();
 
   useEffect(() => {
-    if (!isLoading && user?.role !== 'admin') {
+    if (!isLoading && !(user?.role === 'admin' || user?.isSuperUser)) {
       router.replace('/dashboard');
     }
   }, [user, isLoading, router]);
 
-  if (user?.role !== 'admin') {
+  if (!(user?.role === 'admin' || user?.isSuperUser)) {
     return null;
   }
 

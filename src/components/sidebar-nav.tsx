@@ -79,14 +79,15 @@ export function SidebarNav() {
     );
   }
 
-  const privilegedNavItems =
-    user?.role === "admin"
-      ? secondaryNavItems
-      : secondaryNavItems.filter(
-          (item) =>
-            item.href !== "/dashboard/developer" &&
-            item.href !== "/dashboard/settings"
-        );
+  const privilegedNavItems = secondaryNavItems.filter(item => {
+    if (item.href === '/dashboard/developer') {
+        return user?.role === 'admin' || user?.isSuperUser;
+    }
+    if (item.href === '/dashboard/settings') {
+        return user?.role === 'admin';
+    }
+    return true;
+  });
 
   let visibleMainNavItems;
 
