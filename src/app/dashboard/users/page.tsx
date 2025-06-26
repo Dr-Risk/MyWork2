@@ -3,12 +3,13 @@
 
 import { useAuth } from "@/context/auth-context";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
-import { Users, PlusCircle } from "lucide-react";
+import { Users } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { useState } from "react";
 
-const contractorTasks = [
+const initialContractorTasks = [
     {
         id: 1,
         title: "Transcribe Patient Interview Notes",
@@ -37,6 +38,15 @@ const contractorTasks = [
 
 export default function UsersPage() {
     const { user, isLoading } = useAuth();
+    const [tasks, setTasks] = useState(initialContractorTasks);
+
+    const handleCompleteTask = (taskId: number) => {
+        setTasks((currentTasks) =>
+          currentTasks.map((task) =>
+            task.id === taskId ? { ...task, status: "Completed" } : task
+          )
+        );
+      };
 
     // The main layout handles the primary loading state.
     // We only need to differentiate between roles here.
@@ -47,21 +57,16 @@ export default function UsersPage() {
     if (user?.role === 'contractor') {
         return (
             <>
-                <div className="flex items-center justify-between">
-                    <div>
-                        <h1 className="text-3xl font-headline font-bold tracking-tight">
-                            My Tasks
-                        </h1>
-                        <p className="text-muted-foreground">
-                            Here&apos;s a list of your assigned tasks.
-                        </p>
-                    </div>
-                    <Button>
-                        <PlusCircle className="mr-2 h-4 w-4" /> Add New Task
-                    </Button>
+                <div>
+                    <h1 className="text-3xl font-headline font-bold tracking-tight">
+                        My Tasks
+                    </h1>
+                    <p className="text-muted-foreground">
+                        Here&apos;s a list of your assigned tasks.
+                    </p>
                 </div>
                 <div className="grid gap-4 mt-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                    {contractorTasks.map((task) => (
+                    {tasks.map((task) => (
                         <Card key={task.id} className="flex flex-col">
                             <CardHeader>
                                 <div className="flex justify-between items-start">
@@ -91,6 +96,7 @@ export default function UsersPage() {
                                 <Button
                                     variant={task.status === "Completed" ? "outline" : "default"}
                                     className="w-full"
+                                    onClick={() => task.status !== 'Completed' && handleCompleteTask(task.id)}
                                 >
                                     {task.status === "Completed"
                                         ? "View Details"

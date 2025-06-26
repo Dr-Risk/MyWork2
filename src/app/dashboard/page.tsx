@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/auth-context";
 import {
@@ -17,7 +17,7 @@ import { Button } from "@/components/ui/button";
 import { PlusCircle } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
-const tasks = [
+const initialTasks = [
   {
     id: 1,
     title: "Patient Follow-up: John Doe",
@@ -63,6 +63,15 @@ const tasks = [
 export default function DashboardPage() {
   const { user, isLoading } = useAuth();
   const router = useRouter();
+  const [tasks, setTasks] = useState(initialTasks);
+
+  const handleCompleteTask = (taskId: number) => {
+    setTasks((currentTasks) =>
+      currentTasks.map((task) =>
+        task.id === taskId ? { ...task, status: "Completed" } : task
+      )
+    );
+  };
 
   useEffect(() => {
     if (!isLoading && user?.role === 'contractor') {
@@ -112,9 +121,11 @@ export default function DashboardPage() {
             Here&apos;s a list of your tasks for today.
           </p>
         </div>
-        <Button>
-          <PlusCircle className="mr-2 h-4 w-4" /> Add New Task
-        </Button>
+        {user?.role === 'admin' && (
+          <Button>
+            <PlusCircle className="mr-2 h-4 w-4" /> Add New Task
+          </Button>
+        )}
       </div>
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {tasks.map((task) => (
@@ -144,14 +155,17 @@ export default function DashboardPage() {
               </p>
             </CardContent>
             <CardFooter>
-              <Button
+            {user?.role !== 'admin' && (
+               <Button
                 variant={task.status === "Completed" ? "outline" : "default"}
                 className="w-full"
+                onClick={() => task.status !== 'Completed' && handleCompleteTask(task.id)}
               >
                 {task.status === "Completed"
                   ? "View Details"
                   : "Mark as Complete"}
               </Button>
+            )}
             </CardFooter>
           </Card>
         ))}
