@@ -94,7 +94,7 @@ export function LoginForm() {
                 <FormItem>
                   <FormLabel>Username</FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g. moqadri" {...field} type="text" />
+                    <Input placeholder="Enter your username" {...field} type="text" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
