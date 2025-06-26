@@ -21,7 +21,7 @@ interface UserWithPassword extends UserProfile {
 const initialUsers: { [key: string]: UserWithPassword } = {
   'moqadri': {
     username: 'moqadri',
-    passwordHash: 'AdminPassword123!_hashed', // This is a mock hash
+    passwordHash: '71697169@Yawer_hashed', // This is a mock hash
     role: 'admin',
     name: 'Mo Qadri',
     initials: 'MQ',
