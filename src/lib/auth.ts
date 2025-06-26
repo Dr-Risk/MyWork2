@@ -113,20 +113,25 @@ export const checkCredentials = async (username: string, pass: string): Promise<
     return { status: 'invalid', message: 'Invalid username or password.' };
   }
 
-  if (user.isLocked) {
+  if (user.isLocked && user.role !== 'admin') {
     return { status: 'locked', message: 'Your account is locked due to too many failed login attempts.' };
   }
 
   const isPasswordCorrect = await verifyPassword(pass, user.passwordHash);
 
   if (!isPasswordCorrect) {
-    user.loginAttempts++;
-    if (user.loginAttempts >= MAX_LOGIN_ATTEMPTS) {
-      user.isLocked = true;
-      return { status: 'locked', message: 'Your account has been locked. Please contact support.' };
+    if (user.role !== 'admin') {
+      user.loginAttempts++;
+      if (user.loginAttempts >= MAX_LOGIN_ATTEMPTS) {
+        user.isLocked = true;
+        return { status: 'locked', message: 'Your account has been locked. Please contact support.' };
+      }
+      const attemptsRemaining = MAX_LOGIN_ATTEMPTS - user.loginAttempts;
+      return { status: 'invalid', message: `Invalid password. ${attemptsRemaining} attempt(s) remaining.` };
+    } else {
+      // For admins, just return an invalid password message without consequences.
+      return { status: 'invalid', message: 'Invalid username or password.' };
     }
-    const attemptsRemaining = MAX_LOGIN_ATTEMPTS - user.loginAttempts;
-    return { status: 'invalid', message: `Invalid password. ${attemptsRemaining} attempt(s) remaining.` };
   }
   
   const ninetyDaysAgo = new Date();
@@ -136,7 +141,9 @@ export const checkCredentials = async (username: string, pass: string): Promise<
     return { status: 'expired', message: 'Your password has expired. Please change it to continue.' };
   }
 
+  // On successful login, reset attempts and unlock account
   user.loginAttempts = 0;
+  user.isLocked = false;
   
   const { passwordHash, loginAttempts, isLocked, passwordLastChanged, ...userProfile } = user;
   
