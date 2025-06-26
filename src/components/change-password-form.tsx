@@ -28,11 +28,11 @@ import {
 import { Loader2 } from "lucide-react";
 
 const formSchema = z.object({
-  newPassword: z.string().min(12, {
-    message: "Password must be at least 12 characters.",
+  newPassword: z.string().min(8, {
+    message: "Password must be at least 8 characters.",
   }),
-  confirmPassword: z.string().min(12, {
-    message: "Password must be at least 12 characters.",
+  confirmPassword: z.string().min(8, {
+    message: "Password must be at least 8 characters.",
   }),
 }).refine((data) => data.newPassword === data.confirmPassword, {
   message: "Passwords do not match.",
@@ -87,7 +87,7 @@ export function ChangePasswordForm() {
                 <FormItem>
                   <FormLabel>New Password</FormLabel>
                   <FormControl>
-                    <Input placeholder="••••••••••••" {...field} type="password" />
+                    <Input placeholder="••••••••" {...field} type="password" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -100,7 +100,7 @@ export function ChangePasswordForm() {
                 <FormItem>
                   <FormLabel>Confirm New Password</FormLabel>
                   <FormControl>
-                    <Input placeholder="••••••••••••" {...field} type="password" />
+                    <Input placeholder="••••••••" {...field} type="password" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

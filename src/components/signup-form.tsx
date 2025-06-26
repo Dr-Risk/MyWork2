@@ -34,7 +34,7 @@ const formSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters." }),
   username: z.string().min(3, { message: "Username must be at least 3 characters." }),
   email: z.string().email({ message: "Please enter a valid email address." }),
-  password: z.string().min(12, { message: "Password must be at least 12 characters." }),
+  password: z.string().min(8, { message: "Password must be at least 8 characters." }),
 });
 
 export function SignupForm() {
@@ -136,7 +136,7 @@ export function SignupForm() {
                   <FormLabel>Password</FormLabel>
                   <FormControl>
                     <Input
-                      placeholder="••••••••••••"
+                      placeholder="••••••••"
                       {...field}
                       type="password"
                     />

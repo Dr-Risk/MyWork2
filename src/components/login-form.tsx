@@ -33,8 +33,8 @@ const formSchema = z.object({
   username: z.string()
     .min(1, { message: "Please enter your username." })
     .regex(/^[a-zA-Z0-9_.-]+$/, "Username contains invalid characters."),
-  password: z.string().min(12, {
-    message: "Password must be at least 12 characters.",
+  password: z.string().min(8, {
+    message: "Password must be at least 8 characters.",
   }),
 });
 
@@ -124,7 +124,7 @@ export function LoginForm() {
                   <FormLabel>Password</FormLabel>
                   <FormControl>
                     <Input
-                      placeholder="••••••••••••"
+                      placeholder="••••••••"
                       {...field}
                       type="password"
                     />

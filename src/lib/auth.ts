@@ -22,7 +22,7 @@ interface UserWithPassword extends UserProfile {
 const initialUsers: { [key: string]: UserWithPassword } = {
   'moqadri': {
     username: 'moqadri',
-    passwordHash: 'AdminPassword123!_hashed', // This is a mock hash
+    passwordHash: 'password_hashed', // This is a mock hash
     role: 'admin',
     name: 'Mo Qadri',
     initials: 'MQ',
@@ -34,7 +34,7 @@ const initialUsers: { [key: string]: UserWithPassword } = {
   },
   'casey.white': {
     username: 'casey.white',
-    passwordHash: 'FullTimePassword123!_hashed', // This is a mock hash
+    passwordHash: 'password_hashed', // This is a mock hash
     role: 'full-time',
     name: 'Dr. Casey White',
     initials: 'CW',
@@ -46,7 +46,7 @@ const initialUsers: { [key: string]: UserWithPassword } = {
   },
   'john.doe': {
     username: 'john.doe',
-    passwordHash: 'ContractorPass123!_hashed', // This is a mock hash
+    passwordHash: 'password_hashed', // This is a mock hash
     role: 'contractor',
     name: 'John Doe',
     initials: 'JD',
@@ -69,7 +69,7 @@ const CreateUserSchema = z.object({
   name: z.string().min(2),
   username: z.string().min(3),
   email: z.string().email(),
-  password: z.string().min(12),
+  password: z.string().min(8),
 });
 
 type CreateUserInput = z.infer<typeof CreateUserSchema>;

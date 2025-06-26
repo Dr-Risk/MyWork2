@@ -24,7 +24,7 @@ import { updateUserPassword } from "@/lib/auth";
 
 const UpdateUserPasswordSchema = z.object({
   currentPassword: z.string().min(1, { message: "Please enter your current password." }),
-  newPassword: z.string().min(12, { message: "Password must be at least 12 characters." }),
+  newPassword: z.string().min(8, { message: "Password must be at least 8 characters." }),
   confirmPassword: z.string()
 }).refine(data => data.newPassword === data.confirmPassword, {
   message: "New passwords do not match.",
@@ -78,7 +78,7 @@ export function ProfilePasswordForm() {
             <FormItem>
               <FormLabel>Current Password</FormLabel>
               <FormControl>
-                <Input placeholder="••••••••••••" {...field} type="password" />
+                <Input placeholder="••••••••" {...field} type="password" />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -91,7 +91,7 @@ export function ProfilePasswordForm() {
             <FormItem>
               <FormLabel>New Password</FormLabel>
               <FormControl>
-                <Input placeholder="••••••••••••" {...field} type="password" />
+                <Input placeholder="••••••••" {...field} type="password" />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -104,7 +104,7 @@ export function ProfilePasswordForm() {
             <FormItem>
               <FormLabel>Confirm New Password</FormLabel>
               <FormControl>
-                <Input placeholder="••••••••••••" {...field} type="password" />
+                <Input placeholder="••••••••" {...field} type="password" />
               </FormControl>
               <FormMessage />
             </FormItem>
