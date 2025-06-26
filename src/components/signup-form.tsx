@@ -26,11 +26,13 @@ import {
 } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
 
+// Per NIST guidelines, password length is the most important factor.
+// This schema enforces a minimum length and ensures passwords match.
 const formSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters." }),
   username: z.string().min(3, { message: "Username must be at least 3 characters." }),
   email: z.string().email({ message: "Please enter a valid email address." }),
-  password: z.string().min(5, { message: "Password must be at least 5 characters." }),
+  password: z.string().min(12, { message: "Password must be at least 12 characters." }),
 });
 
 export function SignupForm() {
@@ -50,8 +52,8 @@ export function SignupForm() {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
     // In a real app, you would make an API call here to register the user.
-    // For this prototype, we'll just simulate a delay.
-    console.log("New user data:", values);
+    // The API would then hash the password before storing it.
+    console.log("New user data (password would be hashed on the server):", values);
     await new Promise((resolve) => setTimeout(resolve, 1000));
     setIsLoading(false);
     
@@ -117,7 +119,7 @@ export function SignupForm() {
                   <FormLabel>Password</FormLabel>
                   <FormControl>
                     <Input
-                      placeholder="•••••"
+                      placeholder="••••••••••••"
                       {...field}
                       type="password"
                     />

@@ -26,91 +26,68 @@ import {
   CardDescription,
 } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
-import { checkCredentials } from "@/lib/auth";
-import { useAuth } from "@/context/auth-context";
 
 const formSchema = z.object({
-  username: z.string()
-    .min(1, { message: "Please enter your username." })
-    .regex(/^[a-zA-Z0-9_.-]+$/, "Username contains invalid characters."),
-  password: z.string().min(12, {
+  newPassword: z.string().min(12, {
     message: "Password must be at least 12 characters.",
   }),
+  confirmPassword: z.string().min(12, {
+    message: "Password must be at least 12 characters.",
+  }),
+}).refine((data) => data.newPassword === data.confirmPassword, {
+  message: "Passwords do not match.",
+  path: ["confirmPassword"], // Set error on confirmPassword field
 });
 
-export function LoginForm() {
+export function ChangePasswordForm() {
   const router = useRouter();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
-  const { setUser } = useAuth();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      username: "",
-      password: "",
+      newPassword: "",
+      confirmPassword: "",
     },
   });
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
-    
-    // Simulate network delay
-    await new Promise((resolve) => setTimeout(resolve, 500));
-
-    const response = await checkCredentials(values.username, values.password);
+    // In a real app, you would make an API call here to update the user's password.
+    // The API would then hash the new password before storing it.
+    console.log("New password (would be hashed on server):", values.newPassword);
+    await new Promise((resolve) => setTimeout(resolve, 1000));
     setIsLoading(false);
 
-    switch (response.status) {
-      case 'success':
-        setUser(response.user);
-        toast({
-          title: "Login Successful",
-          description: "Redirecting to your dashboard...",
-        });
-        router.push("/dashboard");
-        break;
-      
-      case 'expired':
-        toast({
-          variant: "destructive",
-          title: "Password Expired",
-          description: response.message,
-        });
-        // In a real app, you might pass user info to this page securely
-        router.push("/change-password");
-        break;
-
-      case 'locked':
-      case 'invalid':
-        toast({
-          variant: "destructive",
-          title: "Login Failed",
-          description: response.message,
-        });
-        break;
-    }
+    toast({
+        title: "Password Changed Successfully",
+        description: "Please log in with your new password.",
+    });
+    
+    // Redirect to login page
+    router.push("/");
   }
 
   return (
     <Card className="w-full">
       <CardHeader>
-        <CardTitle className="font-headline text-2xl">Login</CardTitle>
+        <CardTitle className="font-headline text-2xl">New Password</CardTitle>
         <CardDescription>
-          Enter your credentials to access your dashboard.
+          Enter and confirm your new password.
         </CardDescription>
       </CardHeader>
       <CardContent>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <FormField
               control={form.control}
-              name="username"
+              name="newPassword"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Username</FormLabel>
+                  <FormLabel>New Password</FormLabel>
                   <FormControl>
-                    <Input placeholder="Enter your username" {...field} type="text" />
+                    <Input placeholder="••••••••••••" {...field} type="password" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -118,16 +95,12 @@ export function LoginForm() {
             />
             <FormField
               control={form.control}
-              name="password"
+              name="confirmPassword"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Password</FormLabel>
+                  <FormLabel>Confirm New Password</FormLabel>
                   <FormControl>
-                    <Input
-                      placeholder="••••••••••••"
-                      {...field}
-                      type="password"
-                    />
+                    <Input placeholder="••••••••••••" {...field} type="password" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -135,7 +108,7 @@ export function LoginForm() {
             />
             <Button type="submit" className="w-full" disabled={isLoading}>
               {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Sign In
+              Set New Password
             </Button>
           </form>
         </Form>
