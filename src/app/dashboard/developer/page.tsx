@@ -7,6 +7,7 @@ import { useAuth } from "@/context/auth-context";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { DatabaseViewer } from "@/components/database-viewer";
 
 export default function DeveloperPage() {
   const { user, isLoading } = useAuth();
@@ -57,6 +58,7 @@ export default function DeveloperPage() {
             </div>
         </CardHeader>
       </Card>
+      <DatabaseViewer />
     </div>
   );
 }

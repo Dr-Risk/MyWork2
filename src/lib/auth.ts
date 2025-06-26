@@ -1,3 +1,4 @@
+
 'use server';
 
 import { z } from "zod";
@@ -152,3 +153,17 @@ export const checkCredentials = async (username: string, pass: string): Promise<
   
   return { status: 'success', user: userProfile };
 }
+
+// This is the type for the data sent to the client, with sensitive info removed.
+export type SanitizedUser = Omit<UserWithPassword, 'passwordHash'>;
+
+export const getUsers = async (): Promise<SanitizedUser[]> => {
+  // In a real app, you would add authentication checks here to ensure only admins can access this.
+  // The page component handles the role check for this prototype.
+
+  // Return a sanitized list of users without password hashes
+  return Object.values(users).map(user => {
+    const { passwordHash, ...sanitizedUser } = user;
+    return sanitizedUser;
+  });
+};
