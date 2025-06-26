@@ -1,4 +1,3 @@
-
 'use server';
 
 import { z } from "zod";
@@ -19,9 +18,9 @@ interface UserWithPassword extends UserProfile {
 }
 
 // NOTE: This is a mock database. In a real application, this data would be
-// stored securely in a database and passwords would be hashed with a strong
-// algorithm like Argon2 or bcrypt.
-const users: { [key: string]: UserWithPassword } = {
+// stored securely in a database. For this prototype, we are using a global
+// variable to simulate a persistent data store across server requests.
+const initialUsers: { [key: string]: UserWithPassword } = {
   'moqadri': {
     username: 'moqadri',
     passwordHash: '12345_hashed', // This is a mock hash
@@ -57,6 +56,13 @@ const users: { [key: string]: UserWithPassword } = {
     passwordLastChanged: new Date(new Date().setDate(new Date().getDate() - 91)).toISOString(),
   }
 };
+
+if (!(global as any).users) {
+  (global as any).users = initialUsers;
+}
+
+const users: { [key: string]: UserWithPassword } = (global as any).users;
+
 
 const CreateUserSchema = z.object({
   name: z.string().min(2),
