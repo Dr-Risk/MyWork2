@@ -1,6 +1,8 @@
 
 'use server';
 
+import { z } from "zod";
+
 export interface UserProfile {
     username: string;
     role: 'admin' | 'full-time' | 'contractor';
@@ -54,6 +56,42 @@ const users: { [key: string]: UserWithPassword } = {
     // Set this user's password to be "expired" for demonstration
     passwordLastChanged: new Date(new Date().setDate(new Date().getDate() - 91)).toISOString(),
   }
+};
+
+const CreateUserSchema = z.object({
+  name: z.string().min(2),
+  username: z.string().min(3),
+  email: z.string().email(),
+  password: z.string().min(12),
+});
+
+type CreateUserInput = z.infer<typeof CreateUserSchema>;
+
+export const createUser = async (userData: CreateUserInput): Promise<{ success: boolean; message: string }> => {
+    if (users[userData.username]) {
+        return { success: false, message: "Username already exists." };
+    }
+
+    const initials = (userData.name.match(/\b\w/g) || []).join('').toUpperCase() || '??';
+
+    // A simple mock for creating a new user.
+    // We'll give new users the 'full-time' role by default.
+    users[userData.username] = {
+        username: userData.username,
+        passwordHash: `${userData.password}_hashed`, // MOCK HASHING
+        role: 'full-time', 
+        name: userData.name,
+        initials: initials,
+        email: userData.email,
+        loginAttempts: 0,
+        isLocked: false,
+        passwordLastChanged: new Date().toISOString(),
+    };
+
+    // In a real app, this would be an atomic database operation.
+    console.log(`User '${userData.username}' created in mock database.`);
+    
+    return { success: true, message: "User created successfully." };
 };
 
 // Mock password hashing function. In a real app, use bcrypt.

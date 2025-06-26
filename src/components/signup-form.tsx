@@ -25,6 +25,8 @@ import {
   CardDescription,
 } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { createUser } from "@/lib/auth";
 
 // Per NIST guidelines, password length is the most important factor.
 // This schema enforces a minimum length and ensures passwords match.
@@ -38,6 +40,7 @@ const formSchema = z.object({
 export function SignupForm() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
+  const { toast } = useToast();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -51,14 +54,28 @@ export function SignupForm() {
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
-    // In a real app, you would make an API call here to register the user.
-    // The API would then hash the password before storing it.
-    console.log("New user data (password would be hashed on the server):", values);
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    setIsLoading(false);
-    
-    // Redirect to email verification page
-    router.push("/verify-email");
+    try {
+      const response = await createUser(values);
+      if (response.success) {
+        // Redirect to email verification page
+        router.push("/verify-email");
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Sign Up Failed",
+          description: response.message,
+        });
+      }
+    } catch (error) {
+      console.error("Sign up error:", error);
+      toast({
+        variant: "destructive",
+        title: "An unexpected error occurred",
+        description: "Please try again later.",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   }
 
   return (
