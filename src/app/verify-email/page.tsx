@@ -1,6 +1,8 @@
 
 import { VerifyEmailForm } from "@/components/verify-email-form";
 import { Logo } from "@/components/logo";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Terminal } from "lucide-react";
 
 export default function VerifyEmailPage() {
   return (
@@ -15,6 +17,13 @@ export default function VerifyEmailPage() {
             Enter the code sent to your email to complete registration.
           </p>
         </div>
+        <Alert className="mb-4">
+          <Terminal className="h-4 w-4" />
+          <AlertTitle>Developer Note</AlertTitle>
+          <AlertDescription>
+            This is a demo. Use the code <code className="font-bold text-foreground">123456</code> to proceed.
+          </AlertDescription>
+        </Alert>
         <VerifyEmailForm />
       </div>
     </main>

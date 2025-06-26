@@ -50,8 +50,8 @@ export function VerifyEmailForm() {
     await new Promise((resolve) => setTimeout(resolve, 1000));
     setIsSendingCode(false);
     toast({
-      title: "Code Sent",
-      description: "A new verification code has been sent to your email.",
+      title: "Code 'Resent'",
+      description: "In a real app, a new code would be sent. For this demo, please continue to use 123456.",
     });
   }
 
