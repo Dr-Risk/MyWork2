@@ -38,30 +38,10 @@ const contractorTasks = [
 export default function UsersPage() {
     const { user, isLoading } = useAuth();
 
+    // The main layout handles the primary loading state.
+    // We only need to differentiate between roles here.
     if (isLoading) {
-        return (
-            <div>
-                <Skeleton className="h-8 w-48 mb-2" />
-                <Skeleton className="h-5 w-72" />
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 mt-6">
-                  {[...Array(3)].map((_, i) => (
-                    <Card key={i}>
-                      <CardHeader>
-                        <Skeleton className="h-5 w-3/4" />
-                        <Skeleton className="h-4 w-1/4 mt-1" />
-                      </CardHeader>
-                      <CardContent>
-                        <Skeleton className="h-4 w-full" />
-                        <Skeleton className="h-4 w-5/6 mt-1" />
-                      </CardContent>
-                      <CardFooter>
-                        <Skeleton className="h-10 w-full" />
-                      </CardFooter>
-                    </Card>
-                  ))}
-                </div>
-            </div>
-        );
+        return null;
     }
     
     if (user?.role === 'contractor') {
@@ -127,18 +107,18 @@ export default function UsersPage() {
     return (
         <div>
             <h1 className="text-3xl font-headline font-bold tracking-tight">
-                Other Users
+                Connect with Friends
             </h1>
             <p className="text-muted-foreground">
-                Connect with colleagues and other healthcare professionals.
+                Find colleagues, add them as friends, and start a conversation.
             </p>
             <Card className="mt-6">
                 <CardHeader>
                     <div className="flex items-center gap-4">
                         <Users className="w-8 h-8 text-primary"/>
                         <div>
-                            <CardTitle>Content Under Development</CardTitle>
-                            <CardDescription>This section is coming soon. Stay tuned for updates on user profiles!</CardDescription>
+                            <CardTitle>Chat Feature Coming Soon</CardTitle>
+                            <CardDescription>The ability to add friends and chat is under development. Stay tuned!</CardDescription>
                         </div>
                     </div>
                 </CardHeader>

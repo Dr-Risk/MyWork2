@@ -18,9 +18,6 @@ interface UserWithPassword extends UserProfile {
     passwordLastChanged: string; // ISO 8601 date string
 }
 
-// NOTE: This is a mock database. In a real application, this data would be
-// stored securely in a database. For this prototype, we are using a global
-// variable to simulate a persistent data store across server requests.
 const initialUsers: { [key: string]: UserWithPassword } = {
   'moqadri': {
     username: 'moqadri',
@@ -53,7 +50,6 @@ const initialUsers: { [key: string]: UserWithPassword } = {
     email: 'john.doe@contractor.com',
     loginAttempts: 0,
     isLocked: false,
-    // Set this user's password to be "expired" for demonstration
     passwordLastChanged: new Date(new Date().setDate(new Date().getDate() - 91)).toISOString(),
   }
 };
@@ -81,11 +77,9 @@ export const createUser = async (userData: CreateUserInput): Promise<{ success: 
 
     const initials = (userData.name.match(/\b\w/g) || []).join('').toUpperCase() || '??';
 
-    // A simple mock for creating a new user.
-    // We'll give new users the 'full-time' role by default.
     users[userData.username] = {
         username: userData.username,
-        passwordHash: `${userData.password}_hashed`, // MOCK HASHING
+        passwordHash: `${userData.password}_hashed`,
         role: 'full-time', 
         name: userData.name,
         initials: initials,
@@ -95,13 +89,11 @@ export const createUser = async (userData: CreateUserInput): Promise<{ success: 
         passwordLastChanged: new Date().toISOString(),
     };
 
-    // In a real app, this would be an atomic database operation.
     console.log(`User '${userData.username}' created in mock database.`);
     
     return { success: true, message: "User created successfully." };
 };
 
-// Mock password hashing function. In a real app, use bcrypt.
 const verifyPassword = async (password: string, hash: string): Promise<boolean> => {
     return `${password}_hashed` === hash;
 }
@@ -137,7 +129,6 @@ export const checkCredentials = async (username: string, pass: string): Promise<
     return { status: 'invalid', message: `Invalid password. ${attemptsRemaining} attempt(s) remaining.` };
   }
   
-  // Check for password expiration
   const ninetyDaysAgo = new Date();
   ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
   
@@ -145,23 +136,16 @@ export const checkCredentials = async (username: string, pass: string): Promise<
     return { status: 'expired', message: 'Your password has expired. Please change it to continue.' };
   }
 
-  // On successful login
   user.loginAttempts = 0;
   
-  // Destructure to remove sensitive info before returning
   const { passwordHash, loginAttempts, isLocked, passwordLastChanged, ...userProfile } = user;
   
   return { status: 'success', user: userProfile };
 }
 
-// This is the type for the data sent to the client, with sensitive info removed.
 export type SanitizedUser = Omit<UserWithPassword, 'passwordHash'>;
 
 export const getUsers = async (): Promise<SanitizedUser[]> => {
-  // In a real app, you would add authentication checks here to ensure only admins can access this.
-  // The page component handles the role check for this prototype.
-
-  // Return a sanitized list of users without password hashes
   return Object.values(users).map(user => {
     const { passwordHash, ...sanitizedUser } = user;
     return sanitizedUser;
@@ -178,7 +162,6 @@ export const updateUserRole = async (
     return { success: false, message: 'User not found.' };
   }
 
-  // Prevent changing admin roles for safety in this demo
   if (user.role === 'admin') {
     return { success: false, message: 'Cannot change the role of an admin user.' };
   }
@@ -188,3 +171,47 @@ export const updateUserRole = async (
 
   return { success: true, message: 'User role updated successfully.' };
 };
+
+export const updateUserProfile = async (
+  username: string,
+  data: { name: string; email: string }
+): Promise<{ success: boolean; message: string; user?: UserProfile }> => {
+  const user = users[username];
+
+  if (!user) {
+    return { success: false, message: 'User not found.' };
+  }
+
+  user.name = data.name;
+  user.email = data.email;
+  user.initials = (data.name.match(/\b\w/g) || []).join('').toUpperCase() || '??';
+
+  console.log(`User '${username}' profile updated in mock database.`);
+
+  const { passwordHash, loginAttempts, isLocked, passwordLastChanged, ...userProfile } = user;
+  
+  return { success: true, message: 'Profile updated successfully.', user: userProfile };
+};
+
+export const updateUserPassword = async (
+    username: string,
+    currentPass: string,
+    newPass: string
+): Promise<{ success: boolean; message: string }> => {
+    const user = users[username];
+    if (!user) {
+        return { success: false, message: "User not found." };
+    }
+
+    const isPasswordCorrect = await verifyPassword(currentPass, user.passwordHash);
+    if (!isPasswordCorrect) {
+        return { success: false, message: "Incorrect current password." };
+    }
+
+    user.passwordHash = `${newPass}_hashed`;
+    user.passwordLastChanged = new Date().toISOString();
+
+    console.log(`User '${username}' password updated in mock database.`);
+
+    return { success: true, message: "Password updated successfully." };
+}

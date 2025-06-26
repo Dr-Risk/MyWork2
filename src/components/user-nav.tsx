@@ -30,7 +30,6 @@ export function UserNav() {
     return <Loader2 className="h-5 w-5 animate-spin" />;
   }
 
-  // If user is not logged in according to our auth system
   if (!user) {
     return (
       <DropdownMenu>
@@ -65,7 +64,6 @@ export function UserNav() {
     );
   }
 
-  // If user IS logged in, we can safely access user properties
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -91,9 +89,11 @@ export function UserNav() {
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
-          <DropdownMenuItem>
-            <User className="mr-2 h-4 w-4" />
-            <span>Profile</span>
+          <DropdownMenuItem asChild>
+            <Link href="/dashboard/profile">
+              <User className="mr-2 h-4 w-4" />
+              <span>Profile</span>
+            </Link>
           </DropdownMenuItem>
           {user.role === "admin" && (
             <DropdownMenuItem asChild>

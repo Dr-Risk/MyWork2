@@ -25,7 +25,7 @@ const mainNavItems = [
   { href: "/dashboard/events", label: "New Events", icon: Calendar },
   { href: "/dashboard/resources", label: "Resources", icon: Library },
   { href: "/dashboard/perks", label: "Perks", icon: Award },
-  { href: "/dashboard/users", label: "Other Users", icon: Users },
+  { href: "/dashboard/users", label: "Connect with Friends", icon: Users },
 ];
 
 const secondaryNavItems = [
