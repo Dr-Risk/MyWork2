@@ -1,3 +1,9 @@
+
+'use client';
+
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/context/auth-context";
 import {
   Card,
   CardContent,
@@ -9,6 +15,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PlusCircle } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const tasks = [
   {
@@ -54,6 +61,46 @@ const tasks = [
 ];
 
 export default function DashboardPage() {
+  const { user, isLoading } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!isLoading && user?.role === 'contractor') {
+      router.replace('/dashboard/users');
+    }
+  }, [user, isLoading, router]);
+
+  if (isLoading || user?.role === 'contractor') {
+    return (
+      <>
+        <div className="flex items-center justify-between">
+          <div>
+            <Skeleton className="h-8 w-48 mb-2" />
+            <Skeleton className="h-5 w-72" />
+          </div>
+          <Skeleton className="h-10 w-32" />
+        </div>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 mt-4">
+          {[...Array(4)].map((_, i) => (
+            <Card key={i}>
+              <CardHeader>
+                <Skeleton className="h-5 w-3/4" />
+                <Skeleton className="h-4 w-1/4 mt-1" />
+              </CardHeader>
+              <CardContent>
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-5/6 mt-1" />
+              </CardContent>
+              <CardFooter>
+                <Skeleton className="h-10 w-full" />
+              </CardFooter>
+            </Card>
+          ))}
+        </div>
+      </>
+    );
+  }
+
   return (
     <>
       <div className="flex items-center justify-between">

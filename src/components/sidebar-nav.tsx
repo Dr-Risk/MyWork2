@@ -88,10 +88,25 @@ export function SidebarNav() {
             item.href !== "/dashboard/settings"
         );
 
+  let visibleMainNavItems;
+
+  if (user?.role === 'contractor') {
+    visibleMainNavItems = mainNavItems
+      .filter((item) => item.href === '/dashboard/users')
+      .map((item) => ({ ...item, label: 'My Tasks' }));
+  } else if (user?.role === 'admin' || user?.role === 'full-time') {
+    visibleMainNavItems = mainNavItems;
+  } else { // Guest users
+    visibleMainNavItems = mainNavItems.filter(
+      (item) =>
+        item.href !== "/dashboard/resources" && item.href !== "/dashboard/perks"
+    );
+  }
+
   return (
     <div className="flex h-full flex-col justify-between">
       <nav className="grid items-start px-2 pt-4 text-sm font-medium lg:px-4">
-        {mainNavItems.map(renderNavItem)}
+        {visibleMainNavItems.map(renderNavItem)}
       </nav>
       <nav className="grid items-start px-2 pb-4 text-sm font-medium lg:px-4">
         {privilegedNavItems.map(renderNavItem)}

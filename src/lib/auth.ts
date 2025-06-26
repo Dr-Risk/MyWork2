@@ -1,7 +1,7 @@
 
 export interface UserProfile {
     username: string;
-    role: 'admin' | 'user';
+    role: 'admin' | 'full-time' | 'contractor';
     name: string;
     initials: string;
     email: string;
@@ -23,11 +23,19 @@ const users: UserWithPassword[] = [
   {
     username: 'casey.white',
     password: 'password123',
-    role: 'user',
+    role: 'full-time',
     name: 'Dr. Casey White',
     initials: 'CW',
     email: 'casey.white@health.org'
   },
+  {
+    username: 'john.doe',
+    password: 'password',
+    role: 'contractor',
+    name: 'John Doe',
+    initials: 'JD',
+    email: 'john.doe@contractor.com'
+  }
 ];
 
 export const checkCredentials = (username: string, pass: string): UserProfile | null => {
