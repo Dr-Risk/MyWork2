@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from "next/link";
@@ -15,6 +16,8 @@ import {
   HelpCircle,
   Settings,
 } from "lucide-react";
+import { useAuth } from "@/context/auth-context";
+import { Skeleton } from "./ui/skeleton";
 
 const mainNavItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -33,6 +36,7 @@ const secondaryNavItems = [
 
 export function SidebarNav() {
   const pathname = usePathname();
+  const { user, isLoading } = useAuth();
 
   const renderNavItem = (item: {
     href: string;
@@ -58,13 +62,39 @@ export function SidebarNav() {
     );
   };
 
+  if (isLoading) {
+    return (
+      <div className="flex h-full flex-col justify-between">
+        <nav className="grid items-start gap-2 px-2 pt-4 text-sm font-medium lg:px-4">
+          {[...Array(6)].map((_, i) => (
+            <Skeleton key={i} className="h-8 w-full" />
+          ))}
+        </nav>
+        <nav className="grid items-start gap-2 px-2 pb-4 text-sm font-medium lg:px-4">
+          {[...Array(3)].map((_, i) => (
+            <Skeleton key={i} className="h-8 w-full" />
+          ))}
+        </nav>
+      </div>
+    );
+  }
+
+  const privilegedNavItems =
+    user?.role === "admin"
+      ? secondaryNavItems
+      : secondaryNavItems.filter(
+          (item) =>
+            item.href !== "/dashboard/developer" &&
+            item.href !== "/dashboard/settings"
+        );
+
   return (
     <div className="flex h-full flex-col justify-between">
       <nav className="grid items-start px-2 pt-4 text-sm font-medium lg:px-4">
         {mainNavItems.map(renderNavItem)}
       </nav>
       <nav className="grid items-start px-2 pb-4 text-sm font-medium lg:px-4">
-        {secondaryNavItems.map(renderNavItem)}
+        {privilegedNavItems.map(renderNavItem)}
       </nav>
     </div>
   );

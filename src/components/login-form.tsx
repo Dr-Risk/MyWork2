@@ -1,3 +1,4 @@
+
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -25,15 +26,15 @@ import {
   CardDescription,
 } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
+import { checkCredentials } from "@/lib/auth";
+import { useAuth } from "@/context/auth-context";
 
-// NIST SP 800-63B guidelines recommend a minimum length of 8 characters.
-// We are using 12 for enhanced security.
 const formSchema = z.object({
-  email: z.string().email({
-    message: "Please enter a valid email address.",
+  username: z.string().min(1, {
+    message: "Please enter your username.",
   }),
-  password: z.string().min(12, {
-    message: "Password must be at least 12 characters.",
+  password: z.string().min(5, {
+    message: "Password must be at least 5 characters.",
   }),
 });
 
@@ -41,29 +42,32 @@ export function LoginForm() {
   const router = useRouter();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+  const { setUser } = useAuth();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      email: "",
+      username: "",
       password: "",
     },
   });
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
-    // Simulate API call for login
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    
+    const user = checkCredentials(values.username, values.password);
+
+    await new Promise((resolve) => setTimeout(resolve, 500));
     setIsLoading(false);
 
-    // In a real app, you would handle success/error from your auth API
-    if (values.email === "error@example.com") {
+    if (!user) {
       toast({
         variant: "destructive",
         title: "Login Failed",
-        description: "Invalid email or password. Please try again.",
+        description: "Invalid username or password. Please try again.",
       });
     } else {
+      setUser(user);
       toast({
         title: "Login Successful",
         description: "Redirecting to your dashboard...",
@@ -85,12 +89,12 @@ export function LoginForm() {
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <FormField
               control={form.control}
-              name="email"
+              name="username"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Email Address</FormLabel>
+                  <FormLabel>Username</FormLabel>
                   <FormControl>
-                    <Input placeholder="name@health.org" {...field} type="email" />
+                    <Input placeholder="e.g. moqadri" {...field} type="text" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -104,7 +108,7 @@ export function LoginForm() {
                   <FormLabel>Password</FormLabel>
                   <FormControl>
                     <Input
-                      placeholder="••••••••••••"
+                      placeholder="•••••"
                       {...field}
                       type="password"
                     />
