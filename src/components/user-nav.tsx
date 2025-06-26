@@ -29,7 +29,43 @@ export function UserNav() {
   if (isLoading) {
     return <Loader2 className="h-5 w-5 animate-spin" />;
   }
-  
+
+  // If user is not logged in according to our auth system
+  if (!user) {
+    return (
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost" className="relative h-9 w-9 rounded-full">
+            <Avatar className="h-9 w-9">
+              <AvatarImage
+                src="https://placehold.co/100x100.png"
+                alt="Guest avatar"
+                data-ai-hint="guest avatar"
+              />
+              <AvatarFallback>G</AvatarFallback>
+            </Avatar>
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent className="w-56" align="end" forceMount>
+          <DropdownMenuLabel className="font-normal">
+            <div className="flex flex-col space-y-1">
+              <p className="text-sm font-medium leading-none">Guest</p>
+              <p className="text-xs leading-none text-muted-foreground">
+                Not logged in
+              </p>
+            </div>
+          </DropdownMenuLabel>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onClick={() => router.push('/')}>
+            <LogIn className="mr-2 h-4 w-4" />
+            <span>Log in</span>
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    );
+  }
+
+  // If user IS logged in, we can safely access user properties
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -40,48 +76,39 @@ export function UserNav() {
               alt="User avatar"
               data-ai-hint="user avatar"
             />
-            <AvatarFallback>{user?.initials ?? "G"}</AvatarFallback>
+            <AvatarFallback>{user.initials}</AvatarFallback>
           </Avatar>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-56" align="end" forceMount>
         <DropdownMenuLabel className="font-normal">
           <div className="flex flex-col space-y-1">
-            <p className="text-sm font-medium leading-none">{user?.name ?? "Guest"}</p>
+            <p className="text-sm font-medium leading-none">{user.name}</p>
             <p className="text-xs leading-none text-muted-foreground">
-              {user?.email ?? "Not logged in"}
+              {user.email}
             </p>
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
-        {user ? (
-            <>
-                <DropdownMenuGroup>
-                    <DropdownMenuItem>
-                        <User className="mr-2 h-4 w-4" />
-                        <span>Profile</span>
-                    </DropdownMenuItem>
-                    {user.role === "admin" && (
-                        <DropdownMenuItem asChild>
-                        <Link href="/dashboard/settings">
-                            <Settings className="mr-2 h-4 w-4" />
-                            <span>Settings</span>
-                        </Link>
-                        </DropdownMenuItem>
-                    )}
-                </DropdownMenuGroup>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleLogout}>
-                    <LogOut className="mr-2 h-4 w-4" />
-                    <span>Log out</span>
-                </DropdownMenuItem>
-            </>
-        ) : (
-             <DropdownMenuItem onClick={() => router.push('/')}>
-                <LogIn className="mr-2 h-4 w-4" />
-                <span>Log in</span>
+        <DropdownMenuGroup>
+          <DropdownMenuItem>
+            <User className="mr-2 h-4 w-4" />
+            <span>Profile</span>
+          </DropdownMenuItem>
+          {user.role === "admin" && (
+            <DropdownMenuItem asChild>
+              <Link href="/dashboard/settings">
+                <Settings className="mr-2 h-4 w-4" />
+                <span>Settings</span>
+              </Link>
             </DropdownMenuItem>
-        )}
+          )}
+        </DropdownMenuGroup>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onClick={handleLogout}>
+          <LogOut className="mr-2 h-4 w-4" />
+          <span>Log out</span>
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );
