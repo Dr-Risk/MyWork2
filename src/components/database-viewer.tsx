@@ -17,30 +17,65 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { getUsers, type SanitizedUser } from '@/lib/auth';
+import { getUsers, updateUserRole, type SanitizedUser } from '@/lib/auth';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Database } from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { useToast } from '@/hooks/use-toast';
 
 export function DatabaseViewer() {
   const [users, setUsers] = useState<SanitizedUser[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const { toast } = useToast();
+
+  const fetchUsers = async () => {
+    setIsLoading(true);
+    try {
+      const userList = await getUsers();
+      setUsers(userList);
+    } catch (error) {
+      console.error("Failed to fetch users:", error);
+      toast({
+        variant: "destructive",
+        title: "Error fetching users",
+        description: "Could not load user data.",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchUsers = async () => {
-      setIsLoading(true);
-      try {
-        const userList = await getUsers();
-        setUsers(userList);
-      } catch (error) {
-        console.error("Failed to fetch users:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
     fetchUsers();
   }, []);
+
+  const handleRoleChange = async (
+    username: string,
+    newRole: 'full-time' | 'contractor'
+  ) => {
+    const response = await updateUserRole(username, newRole);
+
+    if (response.success) {
+      toast({
+        title: "Success",
+        description: response.message,
+      });
+      await fetchUsers(); // Refetch users to show the updated role
+    } else {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: response.message,
+      });
+    }
+  };
 
   return (
     <Card className="mt-6">
@@ -50,7 +85,7 @@ export function DatabaseViewer() {
           <div>
             <CardTitle>Mock Database Viewer</CardTitle>
             <CardDescription>
-              A view of the current users in the mock database.
+              A view of the current users in the mock database. You can change user roles here.
             </CardDescription>
           </div>
         </div>
@@ -72,6 +107,7 @@ export function DatabaseViewer() {
                   <TableHead>Status</TableHead>
                   <TableHead>Email</TableHead>
                   <TableHead>Password Last Changed</TableHead>
+                  <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -91,6 +127,26 @@ export function DatabaseViewer() {
                     <TableCell>{user.email}</TableCell>
                     <TableCell>
                       {new Date(user.passwordLastChanged).toLocaleDateString()}
+                    </TableCell>
+                    <TableCell>
+                      {user.role === 'admin' ? (
+                        <Badge>Admin</Badge>
+                      ) : (
+                        <Select
+                          defaultValue={user.role}
+                          onValueChange={(
+                            newRole: 'full-time' | 'contractor'
+                          ) => handleRoleChange(user.username, newRole)}
+                        >
+                          <SelectTrigger className="w-[120px]">
+                            <SelectValue placeholder="Select role" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="full-time">Full-time</SelectItem>
+                            <SelectItem value="contractor">Contractor</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}

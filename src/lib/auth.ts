@@ -167,3 +167,24 @@ export const getUsers = async (): Promise<SanitizedUser[]> => {
     return sanitizedUser;
   });
 };
+
+export const updateUserRole = async (
+  username: string,
+  newRole: 'full-time' | 'contractor'
+): Promise<{ success: boolean; message: string }> => {
+  const user = users[username];
+
+  if (!user) {
+    return { success: false, message: 'User not found.' };
+  }
+
+  // Prevent changing admin roles for safety in this demo
+  if (user.role === 'admin') {
+    return { success: false, message: 'Cannot change the role of an admin user.' };
+  }
+
+  user.role = newRole;
+  console.log(`User '${username}' role updated to '${newRole}' in mock database.`);
+
+  return { success: true, message: 'User role updated successfully.' };
+};
