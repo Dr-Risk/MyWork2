@@ -22,7 +22,7 @@ interface UserWithPassword extends UserProfile {
 const initialUsers: { [key: string]: UserWithPassword } = {
   'moqadri': {
     username: 'moqadri',
-    passwordHash: 'password_hashed', // This is a mock hash
+    passwordHash: 'meditask_hashed', // NEW PASSWORD: meditask
     role: 'admin',
     name: 'Mo Qadri',
     initials: 'MQ',
@@ -34,7 +34,7 @@ const initialUsers: { [key: string]: UserWithPassword } = {
   },
   'casey.white': {
     username: 'casey.white',
-    passwordHash: 'password_hashed', // This is a mock hash
+    passwordHash: 'meditask_hashed', // NEW PASSWORD: meditask
     role: 'full-time',
     name: 'Dr. Casey White',
     initials: 'CW',
@@ -46,7 +46,7 @@ const initialUsers: { [key: string]: UserWithPassword } = {
   },
   'john.doe': {
     username: 'john.doe',
-    passwordHash: 'password_hashed', // This is a mock hash
+    passwordHash: 'meditask_hashed', // NEW PASSWORD: meditask
     role: 'contractor',
     name: 'John Doe',
     initials: 'JD',
