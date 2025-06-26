@@ -12,7 +12,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { LogOut, User, Settings, Loader2 } from "lucide-react";
+import { LogOut, User, Settings, Loader2, LogIn } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "@/context/auth-context";
 import { useRouter } from "next/navigation";
@@ -30,8 +30,6 @@ export function UserNav() {
     return <Loader2 className="h-5 w-5 animate-spin" />;
   }
   
-  const displayUser = user || { name: 'Guest', email: '', initials: 'G', role: 'user' };
-
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -42,39 +40,48 @@ export function UserNav() {
               alt="User avatar"
               data-ai-hint="user avatar"
             />
-            <AvatarFallback>{displayUser.initials}</AvatarFallback>
+            <AvatarFallback>{user?.initials ?? "G"}</AvatarFallback>
           </Avatar>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-56" align="end" forceMount>
         <DropdownMenuLabel className="font-normal">
           <div className="flex flex-col space-y-1">
-            <p className="text-sm font-medium leading-none">{displayUser.name}</p>
+            <p className="text-sm font-medium leading-none">{user?.name ?? "Guest"}</p>
             <p className="text-xs leading-none text-muted-foreground">
-              {displayUser.email}
+              {user?.email ?? "Not logged in"}
             </p>
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
-        <DropdownMenuGroup>
-          <DropdownMenuItem>
-            <User className="mr-2 h-4 w-4" />
-            <span>Profile</span>
-          </DropdownMenuItem>
-          {user?.role === "admin" && (
-            <DropdownMenuItem asChild>
-              <Link href="/dashboard/settings">
-                <Settings className="mr-2 h-4 w-4" />
-                <span>Settings</span>
-              </Link>
+        {user ? (
+            <>
+                <DropdownMenuGroup>
+                    <DropdownMenuItem>
+                        <User className="mr-2 h-4 w-4" />
+                        <span>Profile</span>
+                    </DropdownMenuItem>
+                    {user.role === "admin" && (
+                        <DropdownMenuItem asChild>
+                        <Link href="/dashboard/settings">
+                            <Settings className="mr-2 h-4 w-4" />
+                            <span>Settings</span>
+                        </Link>
+                        </DropdownMenuItem>
+                    )}
+                </DropdownMenuGroup>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleLogout}>
+                    <LogOut className="mr-2 h-4 w-4" />
+                    <span>Log out</span>
+                </DropdownMenuItem>
+            </>
+        ) : (
+             <DropdownMenuItem onClick={() => router.push('/')}>
+                <LogIn className="mr-2 h-4 w-4" />
+                <span>Log in</span>
             </DropdownMenuItem>
-          )}
-        </DropdownMenuGroup>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={handleLogout}>
-          <LogOut className="mr-2 h-4 w-4" />
-          <span>Log out</span>
-        </DropdownMenuItem>
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
   );
