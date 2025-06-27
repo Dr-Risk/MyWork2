@@ -51,8 +51,8 @@ const initialUsers: { [key: string]: UserWithPassword } = {
     name: 'John Doe',
     initials: 'JD',
     email: 'john.doe@contractor.com',
-    loginAttempts: 3,
-    isLocked: true,
+    loginAttempts: 0,
+    isLocked: false,
     passwordLastChanged: new Date(new Date().setDate(new Date().getDate() - 91)).toISOString(),
     isSuperUser: false,
   }
@@ -292,4 +292,23 @@ export const unlockUserAccount = async (
   console.log(`User account for '${username}' has been unlocked.`);
 
   return { success: true, message: 'User account unlocked successfully.' };
+};
+
+export const removeUser = async (
+    username: string
+): Promise<{ success: boolean; message: string }> => {
+    const user = users[username];
+
+    if (!user) {
+        return { success: false, message: "User not found." };
+    }
+
+    if (user.role === 'admin') {
+        return { success: false, message: "Cannot remove an admin account." };
+    }
+
+    delete users[username];
+    console.log(`User '${username}' removed from mock database.`);
+
+    return { success: true, message: "User removed successfully." };
 };

@@ -17,10 +17,10 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { getUsers, updateUserRole, type SanitizedUser, updateUserSuperUserStatus, unlockUserAccount } from '@/lib/auth';
+import { getUsers, updateUserRole, type SanitizedUser, updateUserSuperUserStatus, unlockUserAccount, removeUser } from '@/lib/auth';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
-import { Database, PlusCircle, LockOpen } from 'lucide-react';
+import { Database, PlusCircle, LockOpen, Trash2 } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -40,6 +40,18 @@ import {
   DialogTrigger,
 } from './ui/dialog';
 import { AddUserForm } from './add-user-form';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+
 
 export function DatabaseViewer() {
   const [users, setUsers] = useState<SanitizedUser[]>([]);
@@ -129,6 +141,23 @@ export function DatabaseViewer() {
     }
   };
 
+  const handleRemoveUser = async (username: string) => {
+    const response = await removeUser(username);
+    if (response.success) {
+      toast({
+        title: 'User Removed',
+        description: response.message,
+      });
+      fetchUsers();
+    } else {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: response.message,
+      });
+    }
+  };
+
   const handleUserAdded = () => {
     setIsAddUserDialogOpen(false);
     fetchUsers();
@@ -178,18 +207,19 @@ export function DatabaseViewer() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Username</TableHead>
+                  <TableHead>Email</TableHead>
                   <TableHead>Role</TableHead>
                   <TableHead>Super User</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Email</TableHead>
                   <TableHead>Password Last Changed</TableHead>
-                  <TableHead>Actions</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {users.map((user) => (
                   <TableRow key={user.username}>
                     <TableCell className="font-medium">{user.username}</TableCell>
+                    <TableCell>{user.email}</TableCell>
                     <TableCell>
                       <Badge variant="secondary">{user.role}</Badge>
                     </TableCell>
@@ -210,45 +240,69 @@ export function DatabaseViewer() {
                     </TableCell>
                     <TableCell>
                       {user.isLocked ? (
-                        <div className="flex items-center gap-2">
-                          <Badge variant="destructive">Locked</Badge>
-                          {user.role !== 'admin' && (
-                             <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleUnlockUser(user.username)}
-                              >
-                                <LockOpen className="mr-2 h-4 w-4" />
-                                Unlock
-                              </Button>
-                          )}
-                        </div>
+                        <Badge variant="destructive">Locked</Badge>
                       ) : (
                         <Badge variant="outline">Active</Badge>
                       )}
                     </TableCell>
-                    <TableCell>{user.email}</TableCell>
                     <TableCell>
                       {new Date(user.passwordLastChanged).toLocaleDateString()}
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="text-right">
                       {user.role === 'admin' ? (
                         <Badge>Admin</Badge>
                       ) : (
-                        <Select
-                          defaultValue={user.role}
-                          onValueChange={(
-                            newRole: 'full-time' | 'contractor'
-                          ) => handleRoleChange(user.username, newRole)}
-                        >
-                          <SelectTrigger className="w-[120px]">
-                            <SelectValue placeholder="Select role" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="full-time">Full-time</SelectItem>
-                            <SelectItem value="contractor">Contractor</SelectItem>
-                          </SelectContent>
-                        </Select>
+                        <div className="flex items-center justify-end gap-2">
+                          <Select
+                            defaultValue={user.role}
+                            onValueChange={(
+                              newRole: 'full-time' | 'contractor'
+                            ) => handleRoleChange(user.username, newRole)}
+                          >
+                            <SelectTrigger className="w-[120px]">
+                              <SelectValue placeholder="Select role" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="full-time">Full-time</SelectItem>
+                              <SelectItem value="contractor">Contractor</SelectItem>
+                            </SelectContent>
+                          </Select>
+
+                           {user.isLocked && (
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleUnlockUser(user.username)}
+                                >
+                                    <LockOpen className="mr-2 h-4 w-4" />
+                                    Unlock
+                                </Button>
+                            )}
+
+                           <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button variant="destructive" size="sm">
+                                  <Trash2 className="mr-2 h-4 w-4" /> Remove
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    This action cannot be undone. This will permanently delete the account for <strong>{user.name} ({user.username})</strong>.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                  <AlertDialogAction
+                                    onClick={() => handleRemoveUser(user.username)}
+                                  >
+                                    Yes, remove user
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                        </div>
                       )}
                     </TableCell>
                   </TableRow>
