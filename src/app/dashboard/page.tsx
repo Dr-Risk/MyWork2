@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/auth-context";
 import {
@@ -14,11 +14,23 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, UserCircle } from "lucide-react";
+import { PlusCircle, UserCircle, Trash2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AddTaskForm } from "@/components/add-task-form";
 import { getUsers, type SanitizedUser } from "@/lib/auth";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { useToast } from "@/hooks/use-toast";
 
 export type Task = {
   id: number;
@@ -79,6 +91,16 @@ const initialTasks: Task[] = [
     priority: "Medium",
     dueDate: "Tomorrow",
     status: "Pending",
+    assignee: 'moqadri',
+    assigneeName: 'Mo Qadri',
+  },
+  {
+    id: 6,
+    title: "Order new lab supplies",
+    description: "Inventory check and order placement for the main lab.",
+    priority: "Medium",
+    dueDate: "This Week",
+    status: "Pending",
   },
 ];
 
@@ -88,16 +110,19 @@ export default function DashboardPage() {
   const [tasks, setTasks] = useState<Task[]>(initialTasks);
   const [users, setUsers] = useState<SanitizedUser[]>([]);
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const { toast } = useToast();
+
+  const isPrivilegedUser = user?.role === 'admin' || !!user?.isSuperUser;
 
   useEffect(() => {
     async function fetchUsers() {
-      if (user?.role === 'admin') {
+      if (isPrivilegedUser) {
         const userList = await getUsers();
         setUsers(userList);
       }
     }
     fetchUsers();
-  }, [user]);
+  }, [isPrivilegedUser]);
 
   const handleCompleteTask = (taskId: number) => {
     setTasks((currentTasks) =>
@@ -111,12 +136,37 @@ export default function DashboardPage() {
     setTasks((currentTasks) => [newTask, ...currentTasks]);
     setIsFormOpen(false); // Close the dialog
   };
+  
+  const handleDeleteTask = (taskId: number) => {
+    setTasks((currentTasks) => currentTasks.filter((task) => task.id !== taskId));
+    toast({
+      title: "Task Deleted",
+      description: "The task has been successfully removed.",
+    });
+  };
 
   useEffect(() => {
     if (!isLoading && user?.role === 'contractor') {
       router.replace('/dashboard/users');
     }
   }, [user, isLoading, router]);
+  
+  const groupedTasks = useMemo(() => {
+    if (!isPrivilegedUser) return {};
+    return tasks.reduce((acc, task) => {
+      const assigneeName = task.assigneeName || 'Unassigned';
+      if (!acc[assigneeName]) {
+        acc[assigneeName] = [];
+      }
+      acc[assigneeName].push(task);
+      return acc;
+    }, {} as Record<string, Task[]>);
+  }, [tasks, isPrivilegedUser]);
+
+  const myTasks = useMemo(() => {
+    if (isPrivilegedUser || !user) return [];
+    return tasks.filter(task => task.assignee === user.username);
+  }, [tasks, user, isPrivilegedUser]);
 
   if (isLoading || user?.role === 'contractor') {
     return (
@@ -149,6 +199,76 @@ export default function DashboardPage() {
     );
   }
 
+  const TaskCard = ({ task }: { task: Task }) => (
+    <Card key={task.id} className="flex flex-col">
+      <CardHeader>
+        <div className="flex justify-between items-start">
+          <CardTitle className="text-lg font-headline">
+            {task.title}
+          </CardTitle>
+          <Badge
+            variant={
+              task.priority === "High"
+                ? "destructive"
+                : task.priority === "Medium"
+                ? "secondary"
+                : "outline"
+            }
+          >
+            {task.priority}
+          </Badge>
+        </div>
+        <CardDescription>{task.dueDate}</CardDescription>
+      </CardHeader>
+      <CardContent className="flex-grow space-y-3">
+        <p className="text-sm text-muted-foreground">
+          {task.description}
+        </p>
+          {isPrivilegedUser && task.assigneeName && (
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <UserCircle className="h-4 w-4" />
+              <span>Assigned to {task.assigneeName}</span>
+          </div>
+        )}
+      </CardContent>
+      <CardFooter>
+      {isPrivilegedUser ? (
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button variant="destructive" className="w-full">
+              <Trash2 className="mr-2 h-4 w-4" /> Delete Task
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This action cannot be undone. This will permanently delete the task "{task.title}".
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={() => handleDeleteTask(task.id)}>
+                Yes, delete task
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      ) : (
+          <Button
+            variant={task.status === "Completed" ? "outline" : "default"}
+            className="w-full"
+            onClick={() => task.status !== 'Completed' && handleCompleteTask(task.id)}
+          >
+            {task.status === "Completed"
+              ? "View Details"
+              : "Mark as Complete"}
+          </Button>
+      )}
+      </CardFooter>
+    </Card>
+  );
+
   return (
     <>
       <div className="flex items-center justify-between">
@@ -157,10 +277,12 @@ export default function DashboardPage() {
             Dashboard
           </h1>
           <p className="text-muted-foreground">
-            Here&apos;s a list of your tasks for today.
+            {isPrivilegedUser 
+                ? "Manage all tasks for your team."
+                : "Here's a list of your assigned tasks."}
           </p>
         </div>
-        {user?.role === 'admin' && (
+        {isPrivilegedUser && (
            <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
             <DialogTrigger asChild>
                 <Button>
@@ -179,55 +301,27 @@ export default function DashboardPage() {
           </Dialog>
         )}
       </div>
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {tasks.map((task) => (
-          <Card key={task.id} className="flex flex-col">
-            <CardHeader>
-              <div className="flex justify-between items-start">
-                <CardTitle className="text-lg font-headline">
-                  {task.title}
-                </CardTitle>
-                <Badge
-                  variant={
-                    task.priority === "High"
-                      ? "destructive"
-                      : task.priority === "Medium"
-                      ? "secondary"
-                      : "outline"
-                  }
-                >
-                  {task.priority}
-                </Badge>
+
+      {isPrivilegedUser ? (
+        <div className="space-y-8 mt-6">
+          {Object.entries(groupedTasks).sort(([a], [b]) => a.localeCompare(b)).map(([assignee, userTasks]) => (
+            <div key={assignee}>
+              <h2 className="text-2xl font-headline font-bold tracking-tight">{assignee}</h2>
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 mt-4">
+                {userTasks.map((task) => (
+                  <TaskCard key={task.id} task={task} />
+                ))}
               </div>
-              <CardDescription>{task.dueDate}</CardDescription>
-            </CardHeader>
-            <CardContent className="flex-grow space-y-3">
-              <p className="text-sm text-muted-foreground">
-                {task.description}
-              </p>
-               {task.assigneeName && (
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <UserCircle className="h-4 w-4" />
-                    <span>Assigned to {task.assigneeName}</span>
-                </div>
-              )}
-            </CardContent>
-            <CardFooter>
-            {user?.role !== 'admin' && (
-               <Button
-                variant={task.status === "Completed" ? "outline" : "default"}
-                className="w-full"
-                onClick={() => task.status !== 'Completed' && handleCompleteTask(task.id)}
-              >
-                {task.status === "Completed"
-                  ? "View Details"
-                  : "Mark as Complete"}
-              </Button>
-            )}
-            </CardFooter>
-          </Card>
-        ))}
-      </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 mt-4">
+          {myTasks.map((task) => (
+            <TaskCard key={task.id} task={task} />
+          ))}
+        </div>
+      )}
     </>
   );
 }
