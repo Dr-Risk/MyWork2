@@ -27,6 +27,16 @@ import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { createUser } from "@/lib/auth";
 
+/**
+ * @fileoverview Add User Form Component
+ * 
+ * @description
+ * This component provides a form for administrators to create a new user account.
+ * It's used within a dialog on the Developer page. Like other forms in this
+ * application, it uses `react-hook-form` and `zod` for state management and validation.
+ */
+
+// Zod schema defines the structure and validation rules for the new user form.
 const formSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters." }),
   username: z.string().min(3, { message: "Username must be at least 3 characters." }),
@@ -36,36 +46,40 @@ const formSchema = z.object({
 });
 
 type AddUserFormProps = {
-  onSuccess: () => void;
+  onSuccess: () => void; // A callback function to run on successful user creation.
 };
 
 export function AddUserForm({ onSuccess }: AddUserFormProps) {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
+  // Initialize react-hook-form with the Zod schema and default values.
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: "",
       username: "",
       email: "",
-      password: "DefaultPassword123", // Default password for simplicity
+      password: "DefaultPassword123", // Set a default password for simplicity in this demo.
       role: "full-time",
     },
   });
 
+  // This function is called when the form is submitted and validated successfully.
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
     try {
+      // Call the mock server action to create the user.
       const response = await createUser(values, values.role as 'full-time' | 'contractor');
       if (response.success) {
         toast({
           title: "User Created",
           description: `User '${values.username}' was created successfully.`,
         });
-        onSuccess();
-        form.reset();
+        onSuccess(); // Call the success callback (e.g., to close the dialog and refresh the user list).
+        form.reset(); // Reset the form fields.
       } else {
+        // If the server action returns an error (e.g., username exists), show an error toast.
         toast({
           variant: "destructive",
           title: "Creation Failed",

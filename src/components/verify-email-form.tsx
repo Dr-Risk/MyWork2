@@ -27,6 +27,16 @@ import {
 } from "@/components/ui/card";
 import { Loader2, Send } from "lucide-react";
 
+/**
+ * @fileoverview Verify Email Form Component
+ * 
+ * @description
+ * This component provides a form for users to enter a 6-digit verification code
+ * to complete their account registration. For this demo, it validates against a
+ * hardcoded value.
+ */
+
+// Zod schema to validate that the input is a 6-digit string.
 const formSchema = z.object({
   code: z.string().length(6, { message: "Verification code must be 6 digits." }),
 });
@@ -37,6 +47,7 @@ export function VerifyEmailForm() {
   const [isVerifying, setIsVerifying] = useState(false);
   const [isSendingCode, setIsSendingCode] = useState(false);
 
+  // Initialize react-hook-form with the validation schema.
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -44,9 +55,10 @@ export function VerifyEmailForm() {
     },
   });
 
+  // Simulates resending a verification code.
   async function handleSendCode() {
     setIsSendingCode(true);
-    // Simulate API call to send code
+    // Simulate an API call.
     await new Promise((resolve) => setTimeout(resolve, 1000));
     setIsSendingCode(false);
     toast({
@@ -55,25 +67,26 @@ export function VerifyEmailForm() {
     });
   }
 
+  // Handles the form submission and code verification.
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsVerifying(true);
     await new Promise((resolve) => setTimeout(resolve, 1000));
     setIsVerifying(false);
 
-    // Mock verification
+    // Mock verification: checks if the entered code is the hardcoded "123456".
     if (values.code === "123456") {
       toast({
         title: "Account Created!",
         description: "Your email has been verified. Please log in.",
       });
-      router.push("/");
+      router.push("/"); // Redirect to login page on success.
     } else {
       toast({
         variant: "destructive",
         title: "Verification Failed",
         description: "Invalid code. Please try again.",
       });
-      form.setError("code", { message: "Invalid code." });
+      form.setError("code", { message: "Invalid code." }); // Display an error on the form field.
     }
   }
 

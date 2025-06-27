@@ -1,3 +1,10 @@
+/**
+ * @fileoverview Logo Component
+ * 
+ * @description
+ * A simple, reusable SVG logo component for the application.
+ * The color can be controlled via Tailwind's `text-primary` class.
+ */
 export function Logo() {
   return (
     <svg

@@ -27,6 +27,17 @@ import {
 } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
 
+/**
+ * @fileoverview Change Password Form Component
+ * 
+ * @description
+ * This component provides a form for a user to set a new password. It's used
+ * on the dedicated `/change-password` page, typically when a user's password
+ * has expired. It includes validation to ensure the two password fields match.
+ */
+
+// Zod schema defines the structure and validation rules for the form.
+// It includes a `refine` check to ensure the new password and confirmation password match.
 const formSchema = z.object({
   newPassword: z.string().min(8, {
     message: "Password must be at least 8 characters.",
@@ -36,7 +47,7 @@ const formSchema = z.object({
   }),
 }).refine((data) => data.newPassword === data.confirmPassword, {
   message: "Passwords do not match.",
-  path: ["confirmPassword"], // Set error on confirmPassword field
+  path: ["confirmPassword"], // The error will be displayed on the confirmPassword field.
 });
 
 export function ChangePasswordForm() {
@@ -44,6 +55,7 @@ export function ChangePasswordForm() {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
 
+  // Initialize react-hook-form with the Zod schema.
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -52,11 +64,16 @@ export function ChangePasswordForm() {
     },
   });
 
+  // This function is called when the form is submitted and validated successfully.
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
-    // In a real app, you would make an API call here to update the user's password.
-    // The API would then hash the new password before storing it.
+    
+    // In a real application, you would make an API call here to a secure endpoint
+    // to update the user's password. The server would then hash the new password
+    // before storing it in the database.
     console.log("New password (would be hashed on server):", values.newPassword);
+    
+    // Simulate a network delay.
     await new Promise((resolve) => setTimeout(resolve, 1000));
     setIsLoading(false);
 
@@ -65,7 +82,7 @@ export function ChangePasswordForm() {
         description: "Please log in with your new password.",
     });
     
-    // Redirect to login page
+    // Redirect the user to the login page to sign in with their new credentials.
     router.push("/");
   }
 

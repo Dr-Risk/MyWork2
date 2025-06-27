@@ -22,6 +22,17 @@ import { Loader2 } from "lucide-react";
 import { useAuth } from "@/context/auth-context";
 import { updateUserPassword } from "@/lib/auth";
 
+/**
+ * @fileoverview Profile Password Form Component
+ * 
+ * @description
+ * This component provides a secure form for an authenticated user to change
+ * their own password. It requires them to enter their current password for
+ * verification before allowing a change.
+ */
+
+// Zod schema for validating the password change form.
+// It ensures the new passwords match and meet the minimum length requirement.
 const UpdateUserPasswordSchema = z.object({
   currentPassword: z.string().min(1, { message: "Please enter your current password." }),
   newPassword: z.string().min(8, { message: "Password must be at least 8 characters." }),
@@ -32,11 +43,12 @@ const UpdateUserPasswordSchema = z.object({
 });
 
 export function ProfilePasswordForm() {
-  const { user } = useAuth();
+  const { user } = useAuth(); // Access the current user's data from the context.
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
 
+  // Initialize react-hook-form with the validation schema.
   const form = useForm<z.infer<typeof UpdateUserPasswordSchema>>({
     resolver: zodResolver(UpdateUserPasswordSchema),
     defaultValues: {
@@ -46,10 +58,12 @@ export function ProfilePasswordForm() {
     },
   });
 
+  // This function is called when the form is submitted and validated successfully.
   async function onSubmit(values: z.infer<typeof UpdateUserPasswordSchema>) {
-    if (!user) return;
+    if (!user) return; // Guard clause in case user data isn't available.
 
     setIsLoading(true);
+    // Call the mock server action to update the password.
     const response = await updateUserPassword(user.username, values.currentPassword, values.newPassword);
     setIsLoading(false);
 
@@ -58,8 +72,9 @@ export function ProfilePasswordForm() {
         title: "Password Changed",
         description: "Your password has been updated successfully.",
       });
-      form.reset();
+      form.reset(); // Clear the form fields on success.
     } else {
+      // If the update fails (e.g., incorrect current password), show an error toast.
       toast({
         variant: "destructive",
         title: "Update Failed",

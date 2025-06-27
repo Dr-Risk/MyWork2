@@ -28,6 +28,16 @@ import { useToast } from "@/hooks/use-toast";
 import type { SanitizedUser } from "@/lib/auth";
 import type { Task } from "@/lib/tasks";
 
+/**
+ * @fileoverview Add Task Form Component
+ * 
+ * @description
+ * This component provides a form for creating and assigning a new task.
+ * It's used within a dialog on the main dashboard for privileged users.
+ * It uses `react-hook-form` for form state management and `zod` for validation.
+ */
+
+// Zod schema defines the structure and validation rules for the form fields.
 const formSchema = z.object({
   title: z.string().min(3, { message: "Title must be at least 3 characters." }),
   description: z.string().min(10, { message: "Description must be at least 10 characters." }),
@@ -37,14 +47,15 @@ const formSchema = z.object({
 });
 
 type AddTaskFormProps = {
-  users: SanitizedUser[];
-  onSuccess: (newTask: Task) => void;
+  users: SanitizedUser[]; // The list of users to populate the 'Assign to' dropdown.
+  onSuccess: (newTask: Task) => void; // A callback function to run on successful submission.
 };
 
 export function AddTaskForm({ users, onSuccess }: AddTaskFormProps) {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
+  // Initialize react-hook-form with the Zod schema and default values.
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -56,9 +67,11 @@ export function AddTaskForm({ users, onSuccess }: AddTaskFormProps) {
     },
   });
 
+  // This function is called when the form is submitted and validated successfully.
   function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
 
+    // Find the full user object from the selected assignee username.
     const assignedUser = users.find(u => u.username === values.assignee);
     if (!assignedUser) {
         toast({ variant: "destructive", title: "Error", description: "Selected user not found." });
@@ -66,8 +79,9 @@ export function AddTaskForm({ users, onSuccess }: AddTaskFormProps) {
         return;
     }
 
+    // Construct the new task object.
     const newTask: Task = {
-        id: Date.now(), // Use timestamp for unique ID in this mock setup
+        id: Date.now(), // Use a timestamp for a unique ID in this mock setup.
         title: values.title,
         description: values.description,
         priority: values.priority as "High" | "Medium" | "Low",
@@ -77,14 +91,14 @@ export function AddTaskForm({ users, onSuccess }: AddTaskFormProps) {
         assigneeName: assignedUser.name,
     };
     
-    // Simulate network delay
+    // Simulate a network delay to mimic an API call.
     setTimeout(() => {
-        onSuccess(newTask);
+        onSuccess(newTask); // Call the success callback with the new task.
         toast({
             title: "Task Created",
             description: `'${values.title}' was assigned to ${assignedUser.name}.`,
         });
-        form.reset();
+        form.reset(); // Reset the form fields.
         setIsLoading(false);
     }, 500);
   }
@@ -131,6 +145,7 @@ export function AddTaskForm({ users, onSuccess }: AddTaskFormProps) {
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
+                  {/* Populate the dropdown with the list of users */}
                   {users.map(user => (
                     <SelectItem key={user.username} value={user.username}>
                       {user.name}

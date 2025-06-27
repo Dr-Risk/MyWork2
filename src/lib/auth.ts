@@ -6,7 +6,9 @@
  * @description
  * This file simulates a backend authentication system for demonstration purposes.
  * It manages user data in-memory and includes functions for user creation,
- * authentication, and administration.
+ * authentication, and administration. It's designed to mimic the interface of
+ * a real backend service, allowing the frontend to be built as if it were
+ * communicating with a live API.
  *
  * SECURITY NOTICE (OWASP & NIST Compliance):
  * This is a MOCK system and is NOT secure for production use. It includes
@@ -23,7 +25,7 @@
 
 import { z } from "zod";
 
-// Defines the structure for a user's public profile.
+// Defines the structure for a user's public profile, which is safe to send to the client.
 export interface UserProfile {
     username: string;
     role: 'admin' | 'full-time' | 'contractor';
@@ -33,15 +35,15 @@ export interface UserProfile {
     isSuperUser?: boolean;
 }
 
-// Extends the public profile with sensitive, internal-only data.
+// Extends the public profile with sensitive, internal-only data for the backend.
 interface UserWithPassword extends UserProfile {
-    passwordHash: string; // In a real app, this would be a secure hash.
-    loginAttempts: number;
-    isLocked: boolean;
-    passwordLastChanged: string; // ISO 8601 date string
+    passwordHash: string; // In a real app, this would be a secure hash (e.g., from Argon2 or bcrypt).
+    loginAttempts: number; // For tracking failed login attempts to prevent brute-force attacks.
+    isLocked: boolean; // Flag to lock accounts after too many failed attempts.
+    passwordLastChanged: string; // ISO 8601 date string to enforce password expiration policies.
 }
 
-// In-memory "database" of users. In a real app, this would be a proper database.
+// In-memory "database" of users. In a real app, this would be a proper database (e.g., PostgreSQL, Firestore).
 const initialUsers: { [key: string]: UserWithPassword } = {
   'moqadri': {
     username: 'moqadri',
@@ -58,13 +60,13 @@ const initialUsers: { [key: string]: UserWithPassword } = {
   'john.doe': {
     username: 'john.doe',
     passwordHash: 'meditask_hashed', // Corresponds to 'meditask'
-    role: 'contractor',
+    role: 'full-time',
     name: 'John Doe',
     initials: 'JD',
     email: 'john.doe@contractor.com',
     loginAttempts: 3,
     isLocked: true,
-    passwordLastChanged: new Date(new Date().setDate(new Date().getDate() - 91)).toISOString(),
+    passwordLastChanged: new Date(new Date().setDate(new Date().getDate() - 91)).toISOString(), // Expired password
     isSuperUser: false,
   },
   'utaker': {
@@ -81,28 +83,26 @@ const initialUsers: { [key: string]: UserWithPassword } = {
   }
 };
 
-// This ensures the mock database persists across hot reloads in development.
+// This ensures the mock database persists across hot reloads in development environments.
 if (!(global as any).users) {
   (global as any).users = initialUsers;
 }
-
 const users: { [key: string]: UserWithPassword } = (global as any).users;
 
 
-// Zod schema for validating new user creation data.
+// Zod schema for validating new user creation data on the "server".
 const CreateUserSchema = z.object({
   name: z.string().min(2),
   username: z.string().min(3),
   email: z.string().email(),
   password: z.string().min(8),
 });
-
 type CreateUserInput = z.infer<typeof CreateUserSchema>;
 
 /**
  * Creates a new user in the mock database.
- * @param userData The user's information.
- * @param role The user's role.
+ * @param userData The user's information, validated against the schema.
+ * @param role The user's assigned role.
  * @returns A promise resolving to a success or failure message.
  */
 export const createUser = async (
@@ -114,7 +114,7 @@ export const createUser = async (
         return { success: false, message: "Username already exists." };
     }
 
-    // Generate user initials from their name.
+    // Generate user initials from their name for display avatars.
     const initials = (userData.name.match(/\b\w/g) || []).join('').toUpperCase() || '??';
 
     // Add the new user to the mock database.
@@ -133,14 +133,15 @@ export const createUser = async (
     };
 
     console.log(`User '${userData.username}' created in mock database.`);
-    
     return { success: true, message: "User created successfully." };
 };
 
 /**
  * [SECURITY] Simulates password verification.
- * In a real application, NEVER store passwords in plain text or a reversible format.
+ * In a real application, NEVER store passwords in plain text or use a reversible format.
  * Use a strong, salted, one-way hashing algorithm like Argon2 or bcrypt.
+ * The library would provide a `verify` function that compares the user's input
+ * against the stored hash in a way that's safe from timing attacks.
  * NIST Special Publication 800-63B provides detailed guidance on this.
  * @param password The plain text password from the user.
  * @param hash The stored "hash" from the mock database.
@@ -153,6 +154,7 @@ const verifyPassword = async (password: string, hash: string): Promise<boolean> 
 
 const MAX_LOGIN_ATTEMPTS = 3;
 
+// A discriminated union type for the possible authentication responses.
 export type AuthResponse = 
     | { status: 'success'; user: UserProfile }
     | { status: 'invalid'; message: string }
@@ -160,31 +162,33 @@ export type AuthResponse =
     | { status: 'expired'; message: string };
 
 /**
- * Checks a user's login credentials.
+ * Checks a user's login credentials against the mock database.
  * @param username The user's username.
  * @param pass The user's password.
  * @returns A promise resolving to an AuthResponse object.
  */
 export const checkCredentials = async (username: string, pass: string): Promise<AuthResponse> => {
-  // This is a special case to ensure the primary admin can always log in during development.
+  // A special backdoor for the primary admin to bypass lockout during development.
   if (username === 'moqadri' && pass === 'meditask') {
     const user = users[username];
     if (user) {
-      const { passwordHash, loginAttempts, isLocked, passwordLastChanged, ...userProfile } = user;
       user.isLocked = false;
       user.loginAttempts = 0;
+      const { passwordHash, loginAttempts, isLocked, passwordLastChanged, ...userProfile } = user;
       return { status: 'success', user: userProfile };
     }
   }
 
   const user = users[username];
 
-  // If the user doesn't exist, return a generic error to prevent user enumeration.
+  // [SECURITY] User Enumeration Prevention (OWASP A05):
+  // If the user doesn't exist, return a generic error message. Do not reveal
+  // that the username was the incorrect part of the credential pair.
   if (!user) {
     return { status: 'invalid', message: 'Invalid username or password.' };
   }
 
-  // [SECURITY] Account Lockout: Check if the account is locked.
+  // [SECURITY] Account Lockout: Check if the account is already locked.
   if (user.isLocked && user.role !== 'admin') {
     return { status: 'locked', message: 'Your account is locked due to too many failed login attempts.' };
   }
@@ -200,19 +204,14 @@ export const checkCredentials = async (username: string, pass: string): Promise<
         user.isLocked = true;
         return { status: 'locked', message: 'Your account has been locked. Please contact support.' };
       }
-      // [SECURITY] User Enumeration Prevention (OWASP A05):
-      // Return a generic error message. Do not reveal that only the password was wrong.
-      return { status: 'invalid', message: 'Invalid username or password.' };
-    } else {
-      // For admins, just return an invalid password message without locking.
-      return { status: 'invalid', message: 'Invalid username or password.' };
     }
+    // Return a generic error message for incorrect passwords as well.
+    return { status: 'invalid', message: 'Invalid username or password.' };
   }
   
   // [SECURITY] Password Expiration: Check if the password is older than 90 days.
   const ninetyDaysAgo = new Date();
   ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
-  
   if (new Date(user.passwordLastChanged) < ninetyDaysAgo) {
     return { status: 'expired', message: 'Your password has expired. Please change it to continue.' };
   }
@@ -227,11 +226,11 @@ export const checkCredentials = async (username: string, pass: string): Promise<
   return { status: 'success', user: userProfile };
 }
 
-// A sanitized user type that doesn't include the password hash.
+// A sanitized user type that doesn't include sensitive data.
 export type SanitizedUser = Omit<UserWithPassword, 'passwordHash'>;
 
 /**
- * Retrieves a list of all users without their password hashes.
+ * Retrieves a list of all users, sanitized for safe display on the client.
  * @returns A promise resolving to an array of sanitized user objects.
  */
 export const getUsers = async (): Promise<SanitizedUser[]> => {
@@ -245,7 +244,8 @@ export const getUsers = async (): Promise<SanitizedUser[]> => {
  * [SECURITY] Updates a user's role.
  * In a real application, this function must be a protected server-side endpoint.
  * It should first verify that the currently authenticated user (e.g., from a session token)
- * has administrative privileges before proceeding.
+ * has administrative privileges before proceeding. This is an example of
+ * implementing Broken Access Control (OWASP A01).
  */
 export const updateUserRole = async (
   username: string,
@@ -253,58 +253,48 @@ export const updateUserRole = async (
 ): Promise<{ success: boolean; message: string }> => {
   const user = users[username];
 
-  if (!user) {
-    return { success: false, message: 'User not found.' };
-  }
-
-  if (user.role === 'admin') {
-    return { success: false, message: 'Cannot change the role of an admin user.' };
-  }
+  if (!user) return { success: false, message: 'User not found.' };
+  if (user.role === 'admin') return { success: false, message: 'Cannot change the role of an admin user.' };
 
   user.role = newRole;
   let message = 'User role updated successfully.';
 
-  // If the user is being changed to a contractor, revoke super user status.
+  // If a user is demoted to a contractor, their super user status must be revoked.
   if (newRole === 'contractor' && user.isSuperUser) {
     user.isSuperUser = false;
     message = 'Role updated to Contractor. Super user status was revoked.';
   }
 
   console.log(`User '${username}' role updated to '${newRole}' in mock database.`);
-
   return { success: true, message };
 };
 
 /**
  * [SECURITY] Updates a user's profile information.
- * This should also be a protected server-side endpoint. A user should only be able
- * to update their own profile, unless the caller is an admin.
+ * This should also be a protected server-side endpoint. The logic should verify
+ * that the user is either updating their own profile or is an administrator.
  */
 export const updateUserProfile = async (
   username: string,
   data: { name: string; email: string }
 ): Promise<{ success: boolean; message: string; user?: UserProfile }> => {
   const user = users[username];
-
-  if (!user) {
-    return { success: false, message: 'User not found.' };
-  }
+  if (!user) return { success: false, message: 'User not found.' };
 
   user.name = data.name;
   user.email = data.email;
   user.initials = (data.name.match(/\b\w/g) || []).join('').toUpperCase() || '??';
 
   console.log(`User '${username}' profile updated in mock database.`);
-
   const { passwordHash, loginAttempts, isLocked, passwordLastChanged, ...userProfile } = user;
-  
   return { success: true, message: 'Profile updated successfully.', user: userProfile };
 };
 
 /**
  * [SECURITY] Updates a user's password.
  * This is a critical security function that must be protected on the server.
- * It should verify the user's current password before allowing a change.
+ * It must verify the user's current password before allowing a change to prevent
+ * account takeover if a user's session is hijacked.
  */
 export const updateUserPassword = async (
     username: string,
@@ -312,21 +302,16 @@ export const updateUserPassword = async (
     newPass: string
 ): Promise<{ success: boolean; message: string }> => {
     const user = users[username];
-    if (!user) {
-        return { success: false, message: "User not found." };
-    }
+    if (!user) return { success: false, message: "User not found." };
 
     const isPasswordCorrect = await verifyPassword(currentPass, user.passwordHash);
-    if (!isPasswordCorrect) {
-        return { success: false, message: "Incorrect current password." };
-    }
+    if (!isPasswordCorrect) return { success: false, message: "Incorrect current password." };
 
-    // In a real app, the new password would be hashed here.
+    // In a real app, the new password would be securely hashed here.
     user.passwordHash = `${newPass}_hashed`;
-    user.passwordLastChanged = new Date().toISOString();
+    user.passwordLastChanged = new Date().toISOString(); // Update the timestamp.
 
     console.log(`User '${username}' password updated in mock database.`);
-
     return { success: true, message: "Password updated successfully." };
 }
 
@@ -340,21 +325,12 @@ export const updateUserSuperUserStatus = async (
 ): Promise<{ success: boolean; message: string }> => {
   const user = users[username];
 
-  if (!user) {
-    return { success: false, message: 'User not found.' };
-  }
-
-  if (user.role === 'admin') {
-    return { success: false, message: 'Cannot change super user status for an admin.' };
-  }
-
-  if (user.role === 'contractor' && isSuperUser) {
-    return { success: false, message: 'Contractors cannot be granted super user status.' };
-  }
+  if (!user) return { success: false, message: 'User not found.' };
+  if (user.role === 'admin') return { success: false, message: 'Cannot change super user status for an admin.' };
+  if (user.role === 'contractor' && isSuperUser) return { success: false, message: 'Contractors cannot be granted super user status.' };
 
   user.isSuperUser = isSuperUser;
   console.log(`User '${username}' super user status updated to '${isSuperUser}' in mock database.`);
-
   return { success: true, message: 'Super user status updated successfully.' };
 };
 
@@ -366,18 +342,11 @@ export const lockUserAccount = async (
   username: string
 ): Promise<{ success: boolean; message: string }> => {
   const user = users[username];
-
-  if (!user) {
-    return { success: false, message: 'User not found.' };
-  }
-
-  if (user.role === 'admin') {
-      return { success: false, message: 'Admin accounts cannot be locked.' };
-  }
+  if (!user) return { success: false, message: 'User not found.' };
+  if (user.role === 'admin') return { success: false, message: 'Admin accounts cannot be locked.' };
 
   user.isLocked = true;
   console.log(`User account for '${username}' has been manually locked.`);
-
   return { success: true, message: 'User account locked successfully.' };
 };
 
@@ -389,42 +358,28 @@ export const unlockUserAccount = async (
   username: string
 ): Promise<{ success: boolean; message: string }> => {
   const user = users[username];
-
-  if (!user) {
-    return { success: false, message: 'User not found.' };
-  }
-
-  if (user.role === 'admin') {
-      return { success: false, message: 'Admin accounts cannot be locked.' };
-  }
+  if (!user) return { success: false, message: 'User not found.' };
+  if (user.role === 'admin') return { success: false, message: 'Admin accounts cannot be locked.' };
 
   user.isLocked = false;
-  user.loginAttempts = 0; // Reset login attempts on unlock.
+  user.loginAttempts = 0; // Also reset login attempts on manual unlock.
   console.log(`User account for '${username}' has been unlocked.`);
-
   return { success: true, message: 'User account unlocked successfully.' };
 };
 
 /**
  * [SECURITY] Removes a user from the system.
  * This is a highly destructive and privileged action that must be restricted
- * to admins on the server side.
+ * to admins on the server side. Proper checks are required.
  */
 export const removeUser = async (
     username: string
 ): Promise<{ success: boolean; message: string }> => {
     const user = users[username];
-
-    if (!user) {
-        return { success: false, message: "User not found." };
-    }
-
-    if (user.role === 'admin') {
-        return { success: false, message: "Cannot remove an admin account." };
-    }
+    if (!user) return { success: false, message: "User not found." };
+    if (user.role === 'admin') return { success: false, message: "Cannot remove an admin account." };
 
     delete users[username];
     console.log(`User '${username}' removed from mock database.`);
-
     return { success: true, message: "User removed successfully." };
 };

@@ -20,6 +20,17 @@ import { useAuth } from "@/context/auth-context";
 import { Skeleton } from "./ui/skeleton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
 
+/**
+ * @fileoverview Sidebar Navigation Component
+ * 
+ * @description
+ * This component builds the navigation menu displayed in the dashboard sidebar.
+ * It dynamically renders navigation items based on the user's role and permissions,
+ * ensuring users only see links to pages they are authorized to access.
+ * It also adapts its appearance based on the sidebar's collapsed state.
+ */
+
+// Defines the main navigation items available to most users.
 const mainNavItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/dashboard/blog", label: "Blogs", icon: PenSquare },
@@ -29,6 +40,7 @@ const mainNavItems = [
   { href: "/dashboard/users", label: "Connect with Friends", icon: Users },
 ];
 
+// Defines secondary or administrative navigation items.
 const secondaryNavItems = [
   { href: "/dashboard/developer", label: "Developer", icon: Code },
   { href: "/dashboard/help", label: "Help", icon: HelpCircle },
@@ -39,11 +51,14 @@ export function SidebarNav({ isCollapsed = false }: { isCollapsed?: boolean }) {
   const pathname = usePathname();
   const { user, isLoading } = useAuth();
 
+  // A helper function to render a single navigation item.
+  // It handles active state styling and tooltips for the collapsed view.
   const renderNavItem = (item: {
     href: string;
     label: string;
     icon: React.ElementType;
   }) => {
+    // Determine if the link is active by checking if the current pathname starts with the link's href.
     const isActive =
       item.href === "/dashboard"
         ? pathname === item.href
@@ -54,8 +69,8 @@ export function SidebarNav({ isCollapsed = false }: { isCollapsed?: boolean }) {
             href={item.href}
             className={cn(
               "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary",
-              isActive && "bg-muted text-primary",
-              isCollapsed && "justify-center"
+              isActive && "bg-muted text-primary", // Apply active styles
+              isCollapsed && "justify-center" // Center the icon when collapsed
             )}
         >
             <item.icon className="h-4 w-4" />
@@ -63,6 +78,7 @@ export function SidebarNav({ isCollapsed = false }: { isCollapsed?: boolean }) {
         </Link>
     );
 
+    // If the sidebar is collapsed, wrap the link in a Tooltip for better UX.
     if (isCollapsed) {
         return (
             <Tooltip key={item.label}>
@@ -79,6 +95,7 @@ export function SidebarNav({ isCollapsed = false }: { isCollapsed?: boolean }) {
     return link;
   };
 
+  // Show skeleton loaders while authentication state is being determined.
   if (isLoading) {
     return (
       <div className="flex h-full flex-col justify-between">
@@ -96,6 +113,7 @@ export function SidebarNav({ isCollapsed = false }: { isCollapsed?: boolean }) {
     );
   }
 
+  // Filter the secondary navigation items based on the user's role.
   const privilegedNavItems = secondaryNavItems.filter(item => {
     if (item.href === '/dashboard/developer') {
         return user?.role === 'admin' || user?.isSuperUser;
@@ -103,24 +121,28 @@ export function SidebarNav({ isCollapsed = false }: { isCollapsed?: boolean }) {
     if (item.href === '/dashboard/settings') {
         return user?.role === 'admin';
     }
-    return true;
+    return true; // Help is visible to everyone.
   });
 
+  // Filter the main navigation items based on the user's role.
   let visibleMainNavItems;
-
   if (user?.role === 'contractor') {
+    // Contractors only see their tasks page, with a relabeled link.
     visibleMainNavItems = mainNavItems
       .filter((item) => item.href === '/dashboard/users')
       .map((item) => ({ ...item, label: 'My Tasks' }));
   } else if (user?.role === 'admin' || user?.role === 'full-time') {
+    // Admins and full-time employees see all main navigation items.
     visibleMainNavItems = mainNavItems;
-  } else { // Guest users
+  } else { 
+    // This case would handle other roles, like a hypothetical "guest" user.
     visibleMainNavItems = mainNavItems.filter(
       (item) =>
         item.href !== "/dashboard/resources" && item.href !== "/dashboard/perks"
     );
   }
 
+  // The final rendered navigation container.
   const navContainer = (
     <div className="flex h-full flex-col justify-between">
       <nav className="grid items-start px-2 pt-4 text-sm font-medium lg:px-4">
@@ -132,5 +154,6 @@ export function SidebarNav({ isCollapsed = false }: { isCollapsed?: boolean }) {
     </div>
   );
 
+  // Wrap the entire navigation in a TooltipProvider if the sidebar is collapsed.
   return isCollapsed ? <TooltipProvider>{navContainer}</TooltipProvider> : navContainer;
 }

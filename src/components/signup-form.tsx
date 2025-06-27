@@ -36,6 +36,14 @@ import { useToast } from "@/hooks/use-toast";
 import { createUser } from "@/lib/auth";
 
 /**
+ * @fileoverview Signup Form Component
+ * 
+ * @description
+ * This component provides a form for new users to create an account. It handles
+ * user input, validation, and submission to the mock authentication backend.
+ */
+
+/**
  * [SECURITY] Defines the validation schema for the signup form.
  *
  * NIST Special Publication 800-63B Guidelines on Passwords:
@@ -43,7 +51,8 @@ import { createUser } from "@/lib/auth";
  *   reasonable baseline.
  * - Complexity requirements (e.g., forcing symbols, numbers, uppercase) are
  *   no longer recommended as they often lead to predictable and less secure passwords.
- * - Checking passwords against a list of known-breached passwords is highly recommended.
+ * - Checking passwords against a list of known-breached passwords is highly recommended
+ *   in a production environment (not implemented in this mock).
  */
 const formSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters." }),
@@ -76,10 +85,10 @@ export function SignupForm() {
       // Calls the mock server action to create a new user.
       const response = await createUser(values, values.role);
       if (response.success) {
-        // If successful, redirect to the email verification page.
+        // If successful, redirect to the email verification page to complete the flow.
         router.push("/verify-email");
       } else {
-        // If creation fails (e.g., username exists), show an error toast.
+        // If creation fails (e.g., username already exists), show an error toast.
         toast({
           variant: "destructive",
           title: "Sign Up Failed",

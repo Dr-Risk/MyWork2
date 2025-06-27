@@ -12,6 +12,16 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
 
+/**
+ * @fileoverview Blog Page
+ * 
+ * @description
+ * This page displays a list of blog posts, separated into "Recommended" and "All Posts".
+ * Currently, this is a static demonstration page with hardcoded post data. In a real
+ * application, this data would be fetched from a CMS or a backend API.
+ */
+
+// Hardcoded data for recommended blog posts.
 const recommendedPosts = [
   {
     id: 1,
@@ -29,6 +39,7 @@ const recommendedPosts = [
   },
 ];
 
+// Hardcoded data for all other blog posts.
 const allPosts = [
   {
     id: 3,
@@ -83,6 +94,7 @@ const allPosts = [
 export default function BlogPage() {
   return (
     <div className="space-y-8">
+      {/* Recommended Posts Section */}
       <div>
         <h1 className="text-3xl font-headline font-bold tracking-tight">
           Recommended For You
@@ -119,6 +131,7 @@ export default function BlogPage() {
         ))}
       </div>
 
+      {/* All Posts Section */}
       <div>
         <h2 className="text-3xl font-headline font-bold tracking-tight">
           All Posts

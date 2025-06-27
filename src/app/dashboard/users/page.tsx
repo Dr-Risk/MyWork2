@@ -10,56 +10,71 @@ import { useState, useMemo, useEffect } from "react";
 import type { Task } from "@/lib/tasks";
 import { initialTasks } from "@/lib/tasks";
 
-
+/**
+ * @fileoverview Users / My Tasks Page
+ * 
+ * @description
+ * This page serves a dual purpose based on the logged-in user's role:
+ * 1. For `contractor` users, it acts as their primary task dashboard, showing only the tasks assigned to them.
+ * 2. For `full-time` and `admin` users, it's a "Connect with Friends" page, which is currently a placeholder.
+ * 
+ * This component demonstrates how a single route can render different content based on user permissions.
+ * It also contains its own logic for fetching and persisting task data, specific to the contractor's view.
+ */
 export default function UsersPage() {
     const { user, isLoading } = useAuth();
+
+    // State management for tasks.
     const [tasks, setTasks] = useState<Task[]>([]);
     const [isTasksLoaded, setIsTasksLoaded] = useState(false);
 
+    /**
+     * This effect runs once on component mount to load and reconcile task data for the contractor view.
+     * It uses the same robust merging logic as the main dashboard to ensure data consistency.
+     */
     useEffect(() => {
-        // This effect runs once on mount to load and reconcile tasks.
         try {
+          // Load tasks from local storage.
           const storedTasksJSON = localStorage.getItem('appTasks');
-          // Start with the tasks from local storage, or an empty array.
           const storedTasks = storedTasksJSON ? (JSON.parse(storedTasksJSON) as Task[]) : [];
           
-          // Use a Map for efficient lookup and updating.
+          // Use a Map to merge stored tasks with the default tasks from the codebase.
           const tasksMap = new Map<number, Task>();
           
-          // First, add all stored tasks to the map. These might be user-created or older versions of default tasks.
+          // Add stored tasks first.
           for (const task of storedTasks) {
             tasksMap.set(task.id, task);
           }
           
-          // Then, iterate through the initial (default) tasks from the code.
-          // This will ADD any new default tasks and OVERWRITE any stored default tasks
-          // with the latest version from the code. This ensures consistency and fixes stale data.
+          // Then, add/overwrite with initial tasks to ensure the default data is always fresh.
           for (const initialTask of initialTasks) {
             tasksMap.set(initialTask.id, initialTask);
           }
     
           // The final task list is the values from the map.
           const finalTasks = Array.from(tasksMap.values());
-          
           setTasks(finalTasks);
           
         } catch (error) {
           console.error("Failed to load tasks, falling back to initial set.", error);
-          // If anything goes wrong, just use the initial tasks.
+          // If there's an error, fall back to the raw initial task list.
           setTasks(initialTasks);
         } finally {
           setIsTasksLoaded(true);
         }
-    }, []); // Run only on initial component mount.
+    }, []); // Empty dependency array ensures this runs only once on mount.
 
+    /**
+     * This effect persists the task list to local storage whenever it changes.
+     * The `isTasksLoaded` flag prevents it from saving an empty array before data is loaded.
+     */
     useEffect(() => {
-        // This effect saves the tasks to localStorage whenever they change.
-        // The isTasksLoaded flag prevents saving an empty initial array before loading.
         if (isTasksLoaded) {
             localStorage.setItem('appTasks', JSON.stringify(tasks));
         }
     }, [tasks, isTasksLoaded]);
 
+    // Handler for a contractor to mark their own task as complete.
     const handleCompleteTask = (taskId: number) => {
         const updatedTasks = tasks.map((task) =>
           task.id === taskId ? { ...task, status: "Completed" } : task
@@ -67,18 +82,20 @@ export default function UsersPage() {
         setTasks(updatedTasks);
     };
 
+    // `useMemo` is used for performance to filter and get only the tasks assigned to the current user.
+    // It only recalculates when the task list or the user object changes.
     const myTasks = useMemo(() => {
         if (!user) return [];
         return tasks.filter(task => task.assignee === user.username);
     }, [tasks, user]);
 
 
-    // The main layout handles the primary loading state.
-    // We only need to differentiate between roles here.
+    // Return nothing while authentication and task data are still loading to prevent content flicker.
     if (isLoading || !isTasksLoaded) {
         return null;
     }
     
+    // If the user is a contractor, render their personalized task dashboard.
     if (user?.role === 'contractor') {
         return (
             <>
@@ -91,6 +108,7 @@ export default function UsersPage() {
                     </p>
                 </div>
                 <div className="grid gap-4 mt-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                    {/* Map over the filtered tasks and render a card for each one. */}
                     {myTasks.length > 0 ? myTasks.map((task) => (
                         <Card key={task.id} className="flex flex-col">
                             <CardHeader>
@@ -137,6 +155,7 @@ export default function UsersPage() {
         )
     }
 
+    // If the user is NOT a contractor, render the placeholder "Connect with Friends" page.
     return (
         <div>
             <h1 className="text-3xl font-headline font-bold tracking-tight">

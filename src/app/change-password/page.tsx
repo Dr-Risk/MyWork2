@@ -3,10 +3,19 @@ import { ChangePasswordForm } from "@/components/change-password-form";
 import { Logo } from "@/components/logo";
 import Link from "next/link";
 
+/**
+ * @fileoverview Change Password Page
+ * 
+ * @description
+ * This page is displayed when a user's password has expired, forcing them
+ * to create a new one before they can log in. It provides a secure form
+ * for this purpose.
+ */
 export default function ChangePasswordPage() {
   return (
     <main className="flex min-h-screen flex-col items-center justify-center bg-background p-8">
       <div className="w-full max-w-sm">
+        {/* Header section with Logo and page title */}
         <div className="flex flex-col items-center justify-center mb-8">
           <Logo />
           <h1 className="text-4xl font-headline font-bold text-center mt-4">
@@ -16,7 +25,11 @@ export default function ChangePasswordPage() {
             Your password has expired. Please create a new one.
           </p>
         </div>
+        
+        {/* Renders the form component for changing the password */}
         <ChangePasswordForm />
+
+        {/* Link to go back to the login page */}
          <p className="px-8 text-center text-sm text-muted-foreground mt-8">
           <Link
             href="/"

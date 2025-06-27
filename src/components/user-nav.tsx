@@ -17,19 +17,31 @@ import Link from "next/link";
 import { useAuth } from "@/context/auth-context";
 import { useRouter } from "next/navigation";
 
+/**
+ * @fileoverview User Navigation Dropdown Component
+ * 
+ * @description
+ * This component renders the user avatar and dropdown menu in the main header.
+ * It displays user information and provides links to the profile, settings (for admins),
+ * and a logout button. It adapts its content based on whether a user is logged in or not.
+ */
 export function UserNav() {
   const { user, setUser, isLoading } = useAuth();
   const router = useRouter();
 
+  // Handles the logout process by clearing the user from the auth context
+  // and redirecting to the login page.
   const handleLogout = () => {
     setUser(null);
     router.push("/");
   };
 
+  // Show a loading spinner while the authentication state is being determined.
   if (isLoading) {
     return <Loader2 className="h-5 w-5 animate-spin" />;
   }
 
+  // If no user is logged in, display a "Guest" version of the dropdown.
   if (!user) {
     return (
       <DropdownMenu>
@@ -64,6 +76,7 @@ export function UserNav() {
     );
   }
 
+  // If a user is logged in, display their information and relevant links.
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -95,6 +108,7 @@ export function UserNav() {
               <span>Profile</span>
             </Link>
           </DropdownMenuItem>
+          {/* The Settings link is only shown to users with the 'admin' role. */}
           {user.role === "admin" && (
             <DropdownMenuItem asChild>
               <Link href="/dashboard/settings">

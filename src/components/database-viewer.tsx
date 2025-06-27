@@ -52,13 +52,23 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 
-
+/**
+ * @fileoverview Mock Database Viewer Component
+ * 
+ * @description
+ * This component provides a user interface for administrators to view and manage
+ * all user accounts in the mock database. It displays users in a table and provides
+ * controls for adding new users, changing roles, toggling super user status,
+ * locking/unlocking accounts, and removing users.
+ */
 export function DatabaseViewer() {
+  // State management for the user list, loading status, and the 'Add User' dialog.
   const [users, setUsers] = useState<SanitizedUser[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isAddUserDialogOpen, setIsAddUserDialogOpen] = useState(false);
   const { toast } = useToast();
 
+  // Fetches the list of users from the mock backend.
   const fetchUsers = async () => {
     setIsLoading(true);
     try {
@@ -76,10 +86,12 @@ export function DatabaseViewer() {
     }
   };
 
+  // This effect runs on component mount to fetch the initial user list.
   useEffect(() => {
     fetchUsers();
   }, []);
 
+  // Handler for changing a user's role. It calls the mock API and then refetches the user list.
   const handleRoleChange = async (
     username: string,
     newRole: 'full-time' | 'contractor'
@@ -87,20 +99,14 @@ export function DatabaseViewer() {
     const response = await updateUserRole(username, newRole);
 
     if (response.success) {
-      toast({
-        title: "Success",
-        description: response.message,
-      });
-      await fetchUsers(); // Refetch users to show the updated role
+      toast({ title: "Success", description: response.message });
+      await fetchUsers(); // Refetch to show the updated data.
     } else {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: response.message,
-      });
+      toast({ variant: "destructive", title: "Error", description: response.message });
     }
   };
 
+  // Handler for changing a user's super user status.
   const handleSuperUserChange = async (
     username: string,
     isSuperUser: boolean
@@ -108,76 +114,52 @@ export function DatabaseViewer() {
     const response = await updateUserSuperUserStatus(username, isSuperUser);
 
     if (response.success) {
-        toast({
-            title: "Success",
-            description: response.message,
-        });
+        toast({ title: "Success", description: response.message });
         await fetchUsers();
     } else {
-        toast({
-            variant: "destructive",
-            title: "Error",
-            description: response.message,
-        });
-        // We need to refetch to revert the switch state visually on failure
+        toast({ variant: "destructive", title: "Error", description: response.message });
+        // Refetch even on failure to revert the optimistic UI of the switch component.
         await fetchUsers(); 
     }
   };
 
+  // Handler for locking a user's account.
   const handleLockUser = async (username: string) => {
     const response = await lockUserAccount(username);
     if (response.success) {
-      toast({
-        title: 'Success',
-        description: response.message,
-      });
+      toast({ title: 'Success', description: response.message });
       fetchUsers();
     } else {
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: response.message,
-      });
+      toast({ variant: 'destructive', title: 'Error', description: response.message });
     }
   };
 
+  // Handler for unlocking a user's account.
   const handleUnlockUser = async (username: string) => {
     const response = await unlockUserAccount(username);
     if (response.success) {
-      toast({
-        title: 'Success',
-        description: response.message,
-      });
+      toast({ title: 'Success', description: response.message });
       fetchUsers();
     } else {
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: response.message,
-      });
+      toast({ variant: 'destructive', title: 'Error', description: response.message });
     }
   };
 
+  // Handler for removing a user.
   const handleRemoveUser = async (username: string) => {
     const response = await removeUser(username);
     if (response.success) {
-      toast({
-        title: 'User Removed',
-        description: response.message,
-      });
+      toast({ title: 'User Removed', description: response.message });
       fetchUsers();
     } else {
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: response.message,
-      });
+      toast({ variant: 'destructive', title: 'Error', description: response.message });
     }
   };
 
+  // Callback function for when a new user is successfully added via the form.
   const handleUserAdded = () => {
-    setIsAddUserDialogOpen(false);
-    fetchUsers();
+    setIsAddUserDialogOpen(false); // Close the dialog.
+    fetchUsers(); // Refresh the user list.
   };
 
   return (
@@ -193,6 +175,7 @@ export function DatabaseViewer() {
               </CardDescription>
             </div>
           </div>
+          {/* Dialog for adding a new user. */}
            <Dialog open={isAddUserDialogOpen} onOpenChange={setIsAddUserDialogOpen}>
             <DialogTrigger asChild>
                 <Button>
@@ -212,6 +195,7 @@ export function DatabaseViewer() {
         </div>
       </CardHeader>
       <CardContent>
+        {/* Show skeleton loaders while fetching data. */}
         {isLoading ? (
           <div className="space-y-2">
             <Skeleton className="h-10 w-full" />
@@ -233,6 +217,7 @@ export function DatabaseViewer() {
                 </TableRow>
               </TableHeader>
               <TableBody>
+                {/* Map over the users and render a row for each one. */}
                 {users.map((user) => (
                   <TableRow key={user.username}>
                     <TableCell className="font-medium">{user.username}</TableCell>
@@ -241,12 +226,13 @@ export function DatabaseViewer() {
                       <Badge variant="secondary">{user.role}</Badge>
                     </TableCell>
                     <TableCell>
+                      {/* Super User switch is only available for non-admin users. */}
                       {user.role !== 'admin' ? (
                           <div className="flex items-center">
                               <Switch
                                   id={`superuser-switch-${user.username}`}
                                   checked={!!user.isSuperUser}
-                                  disabled={user.role === 'contractor'}
+                                  disabled={user.role === 'contractor'} // Contractors can't be super users.
                                   onCheckedChange={(checked) => handleSuperUserChange(user.username, checked)}
                                   aria-label={`Toggle super user status for ${user.username}`}
                               />
@@ -266,10 +252,12 @@ export function DatabaseViewer() {
                       {new Date(user.passwordLastChanged).toLocaleDateString()}
                     </TableCell>
                     <TableCell className="text-right">
+                      {/* Admins cannot be modified from this interface. */}
                       {user.role === 'admin' ? (
                         <Badge>Admin</Badge>
                       ) : (
                         <div className="flex items-center justify-end gap-2">
+                          {/* Role selection dropdown */}
                           <Select
                             defaultValue={user.role}
                             onValueChange={(
@@ -285,6 +273,7 @@ export function DatabaseViewer() {
                             </SelectContent>
                           </Select>
 
+                          {/* Lock/Unlock button */}
                           {user.isLocked ? (
                                 <Button
                                     variant="outline"
@@ -304,7 +293,8 @@ export function DatabaseViewer() {
                                     Lock
                                 </Button>
                             )}
-
+                          
+                           {/* Remove user button with confirmation dialog */}
                            <AlertDialog>
                               <AlertDialogTrigger asChild>
                                 <Button variant="destructive" size="sm">

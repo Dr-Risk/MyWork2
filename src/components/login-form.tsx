@@ -29,6 +29,15 @@ import { Loader2 } from "lucide-react";
 import { checkCredentials } from "@/lib/auth";
 import { useAuth } from "@/context/auth-context";
 
+/**
+ * @fileoverview Login Form Component
+ * 
+ * @description
+ * This component handles the user login process. It provides a form for users
+ * to enter their username and password, validates the input, and communicates
+ * with the mock authentication backend (`/lib/auth.ts`) to verify credentials.
+ */
+
 // This schema defines the validation rules for the login form fields
 // using Zod. It ensures that the data has a valid format before submission.
 const formSchema = z.object({
@@ -45,7 +54,7 @@ export function LoginForm() {
   const router = useRouter();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
-  const { setUser } = useAuth();
+  const { setUser } = useAuth(); // Get the setUser function from the auth context.
 
   // Initialize the form with react-hook-form and Zod resolver.
   const form = useForm<z.infer<typeof formSchema>>({
@@ -71,15 +80,15 @@ export function LoginForm() {
     const response = await checkCredentials(values.username, values.password);
     setIsLoading(false);
 
-    // Handle the different authentication responses.
+    // Handle the different authentication responses from the mock backend.
     switch (response.status) {
       case 'success':
-        setUser(response.user); // Update the global auth context.
+        setUser(response.user); // Update the global auth context with the user's profile.
         toast({
           title: "Login Successful",
           description: "Redirecting to your dashboard...",
         });
-        router.push("/dashboard");
+        router.push("/dashboard"); // Redirect to the dashboard on success.
         break;
       
       case 'expired':
@@ -88,13 +97,14 @@ export function LoginForm() {
           title: "Password Expired",
           description: response.message,
         });
-        // Redirect to the password change page.
+        // Redirect to the password change page if the password has expired.
         router.push("/change-password");
         break;
 
       case 'locked':
       case 'invalid':
-        // Show a generic failure message for locked or invalid credentials.
+        // Show a generic failure message for locked or invalid credentials
+        // to prevent user enumeration attacks.
         toast({
           variant: "destructive",
           title: "Login Failed",
