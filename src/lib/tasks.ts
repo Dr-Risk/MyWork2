@@ -22,14 +22,6 @@ export const initialTasks: Task[] = [
     assigneeName: 'Mo Qadri',
   },
   {
-    id: 6,
-    title: "Order new lab supplies",
-    description: "Inventory check and order placement for the main lab.",
-    priority: "Medium",
-    dueDate: "This Week",
-    status: "Pending",
-  },
-  {
     id: 7,
     title: "Follow up with patient",
     description: "Check in on the patient from yesterday's appointment.",

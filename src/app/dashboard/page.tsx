@@ -47,49 +47,47 @@ export default function DashboardPage() {
   
   useEffect(() => {
     async function loadData() {
+      if (isLoading) return;
+
       try {
-        // Fetch users first if privileged
-        let userList: SanitizedUser[] = [];
-        if (isPrivilegedUser) {
-          userList = await getUsers();
-          setUsers(userList);
-        }
+        const userList = await getUsers();
+        setUsers(userList);
         const existingUsernames = new Set(userList.map(u => u.username));
 
-        // Load and reconcile tasks
         const storedTasksJSON = localStorage.getItem('appTasks');
         const storedTasks = storedTasksJSON ? (JSON.parse(storedTasksJSON) as Task[]) : [];
         
         const tasksMap = new Map<number, Task>();
         
+        // Add stored tasks first
         for (const task of storedTasks) {
           tasksMap.set(task.id, task);
         }
         
+        // Add/overwrite with initial tasks to ensure they are up-to-date
         for (const initialTask of initialTasks) {
           tasksMap.set(initialTask.id, initialTask);
         }
 
-        let finalTasks = Array.from(tasksMap.values());
-
-        // For privileged users, filter out tasks assigned to non-existent users
-        if (isPrivilegedUser) {
-          finalTasks = finalTasks.filter(task => !task.assignee || existingUsernames.has(task.assignee));
-        }
+        let reconciledTasks = Array.from(tasksMap.values());
+        
+        // Filter out tasks that are unassigned or assigned to non-existent users.
+        const finalTasks = reconciledTasks.filter(task => {
+          return task.assignee && existingUsernames.has(task.assignee);
+        });
         
         setTasks(finalTasks);
       } catch (error) {
         console.error("Failed to load data, falling back to initial set.", error);
-        setTasks(initialTasks);
+        // Fallback should also only contain assigned tasks
+        setTasks(initialTasks.filter(task => !!task.assignee));
       } finally {
         setIsTasksLoaded(true);
       }
     }
 
-    if (!isLoading) {
-      loadData();
-    }
-  }, [isPrivilegedUser, isLoading]);
+    loadData();
+  }, [isLoading]);
 
   useEffect(() => {
     // This effect saves the tasks to localStorage whenever they change.
@@ -129,11 +127,14 @@ export default function DashboardPage() {
   const groupedTasks = useMemo(() => {
     if (!isPrivilegedUser) return {};
     return tasks.reduce((acc, task) => {
-      const assigneeName = task.assigneeName || 'Unassigned';
-      if (!acc[assigneeName]) {
-        acc[assigneeName] = [];
+      // Since we filter for assigned tasks, assigneeName should exist.
+      if (task.assigneeName) {
+        const assigneeName = task.assigneeName;
+        if (!acc[assigneeName]) {
+          acc[assigneeName] = [];
+        }
+        acc[assigneeName].push(task);
       }
-      acc[assigneeName].push(task);
       return acc;
     }, {} as Record<string, Task[]>);
   }, [tasks, isPrivilegedUser]);
