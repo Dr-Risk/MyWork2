@@ -91,7 +91,7 @@ export function AddTaskForm({ users, onSuccess }: AddTaskFormProps) {
   }
   
   // Filter out contractors from the assignment list
-  const assignableUsers = users.filter(user => user.role === 'full-time');
+  const assignableUsers = users.filter(user => user.role === 'full-time' || user.role === 'admin');
 
   return (
     <Form {...form}>
