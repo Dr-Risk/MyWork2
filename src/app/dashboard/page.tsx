@@ -126,23 +126,30 @@ export default function DashboardPage() {
   const isPrivilegedUser = user?.role === 'admin' || !!user?.isSuperUser;
   
   useEffect(() => {
-    // This effect initializes tasks from localStorage or falls back to initialTasks.
-    // It's designed to run only once on component mount.
+    // This effect runs once on mount to load and reconcile tasks.
     try {
       const storedTasksJSON = localStorage.getItem('appTasks');
-      if (storedTasksJSON) {
-        setTasks(JSON.parse(storedTasksJSON));
-      } else {
-        // If no tasks are in storage, initialize with the default set.
-        setTasks(initialTasks);
-      }
+      const storedTasks = storedTasksJSON ? (JSON.parse(storedTasksJSON) as Task[]) : [];
+      
+      // Create a Set of IDs from the tasks stored in localStorage
+      const storedTaskIds = new Set(storedTasks.map(task => task.id));
+      
+      // Filter initialTasks to get only those that are NOT already in storage.
+      const newInitialTasks = initialTasks.filter(task => !storedTaskIds.has(task.id));
+      
+      // The final task list is the combination of stored tasks and any new default tasks.
+      const finalTasks = [...storedTasks, ...newInitialTasks];
+      
+      setTasks(finalTasks);
+      
     } catch (error) {
-      console.error("Failed to load tasks from localStorage", error);
-      setTasks(initialTasks); // Fallback to default tasks on error
+      console.error("Failed to load tasks, falling back to initial set.", error);
+      // If anything goes wrong, just use the initial tasks.
+      setTasks(initialTasks);
     } finally {
       setIsTasksLoaded(true);
     }
-  }, []);
+  }, []); // Run only on initial component mount.
 
   useEffect(() => {
     // This effect saves the tasks to localStorage whenever they change.
