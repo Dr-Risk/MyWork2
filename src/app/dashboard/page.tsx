@@ -126,38 +126,27 @@ export default function DashboardPage() {
   const isPrivilegedUser = user?.role === 'admin' || !!user?.isSuperUser;
   
   useEffect(() => {
+    // This effect initializes tasks from localStorage or falls back to initialTasks.
+    // It's designed to run only once on component mount.
     try {
       const storedTasksJSON = localStorage.getItem('appTasks');
-      let finalTasks: Task[];
-
       if (storedTasksJSON) {
-        // If there's stored data, use it as the base.
-        const storedTasks = JSON.parse(storedTasksJSON) as Task[];
-        
-        // Create a Set of existing task IDs for efficient lookup.
-        const existingIds = new Set(storedTasks.map(t => t.id));
-
-        // Find any initial tasks that are NOT already in the stored tasks.
-        const missingInitialTasks = initialTasks.filter(it => !existingIds.has(it.id));
-
-        // Combine the stored tasks with any missing initial tasks.
-        finalTasks = [...storedTasks, ...missingInitialTasks];
-
+        setTasks(JSON.parse(storedTasksJSON));
       } else {
-        // If no stored data, use the initial tasks.
-        finalTasks = initialTasks;
+        // If no tasks are in storage, initialize with the default set.
+        setTasks(initialTasks);
       }
-      
-      setTasks(finalTasks);
     } catch (error) {
-      console.error("Failed to process tasks from localStorage", error);
-      // On error, fall back to initial tasks.
-      setTasks(initialTasks);
+      console.error("Failed to load tasks from localStorage", error);
+      setTasks(initialTasks); // Fallback to default tasks on error
+    } finally {
+      setIsTasksLoaded(true);
     }
-    setIsTasksLoaded(true);
   }, []);
 
   useEffect(() => {
+    // This effect saves the tasks to localStorage whenever they change.
+    // The isTasksLoaded flag prevents saving an empty initial array before loading.
     if (isTasksLoaded) {
       localStorage.setItem('appTasks', JSON.stringify(tasks));
     }
