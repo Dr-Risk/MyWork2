@@ -24,6 +24,13 @@ import {
   CardTitle,
   CardDescription,
 } from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { createUser } from "@/lib/auth";
@@ -35,6 +42,7 @@ const formSchema = z.object({
   username: z.string().min(3, { message: "Username must be at least 3 characters." }),
   email: z.string().email({ message: "Please enter a valid email address." }),
   password: z.string().min(8, { message: "Password must be at least 8 characters." }),
+  role: z.enum(["full-time", "contractor"], { required_error: "Please select your role." }),
 });
 
 export function SignupForm() {
@@ -55,7 +63,7 @@ export function SignupForm() {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
     try {
-      const response = await createUser(values);
+      const response = await createUser(values, values.role);
       if (response.success) {
         // Redirect to email verification page
         router.push("/verify-email");
@@ -141,6 +149,27 @@ export function SignupForm() {
                       type="password"
                     />
                   </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="role"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>I am a</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select your role..." />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="full-time">Full-time Employee</SelectItem>
+                      <SelectItem value="contractor">Contractor</SelectItem>
+                    </SelectContent>
+                  </Select>
                   <FormMessage />
                 </FormItem>
               )}
