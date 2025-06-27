@@ -14,10 +14,24 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { PlusCircle } from "lucide-react";
+import { PlusCircle, UserCircle } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { AddTaskForm } from "@/components/add-task-form";
+import { getUsers, type SanitizedUser } from "@/lib/auth";
 
-const initialTasks = [
+export type Task = {
+  id: number;
+  title: string;
+  description: string;
+  priority: "High" | "Medium" | "Low";
+  dueDate: string;
+  status: "Pending" | "Completed";
+  assignee?: string;
+  assigneeName?: string;
+};
+
+const initialTasks: Task[] = [
   {
     id: 1,
     title: "Patient Follow-up: John Doe",
@@ -25,6 +39,8 @@ const initialTasks = [
     priority: "High",
     dueDate: "Today",
     status: "Pending",
+    assignee: "casey.white",
+    assigneeName: "Dr. Casey White",
   },
   {
     id: 2,
@@ -33,6 +49,8 @@ const initialTasks = [
     priority: "High",
     dueDate: "Today",
     status: "Pending",
+    assignee: "casey.white",
+    assigneeName: "Dr. Casey White",
   },
   {
     id: 3,
@@ -41,6 +59,8 @@ const initialTasks = [
     priority: "Medium",
     dueDate: "Tomorrow",
     status: "Pending",
+    assignee: "casey.white",
+    assigneeName: "Dr. Casey White",
   },
   {
     id: 4,
@@ -49,6 +69,8 @@ const initialTasks = [
     priority: "Low",
     dueDate: "This Week",
     status: "Completed",
+    assignee: "casey.white",
+    assigneeName: "Dr. Casey White",
   },
   {
     id: 5,
@@ -63,7 +85,19 @@ const initialTasks = [
 export default function DashboardPage() {
   const { user, isLoading } = useAuth();
   const router = useRouter();
-  const [tasks, setTasks] = useState(initialTasks);
+  const [tasks, setTasks] = useState<Task[]>(initialTasks);
+  const [users, setUsers] = useState<SanitizedUser[]>([]);
+  const [isFormOpen, setIsFormOpen] = useState(false);
+
+  useEffect(() => {
+    async function fetchUsers() {
+      if (user?.role === 'admin') {
+        const userList = await getUsers();
+        setUsers(userList);
+      }
+    }
+    fetchUsers();
+  }, [user]);
 
   const handleCompleteTask = (taskId: number) => {
     setTasks((currentTasks) =>
@@ -71,6 +105,11 @@ export default function DashboardPage() {
         task.id === taskId ? { ...task, status: "Completed" } : task
       )
     );
+  };
+  
+  const handleAddTask = (newTask: Task) => {
+    setTasks((currentTasks) => [newTask, ...currentTasks]);
+    setIsFormOpen(false); // Close the dialog
   };
 
   useEffect(() => {
@@ -122,9 +161,22 @@ export default function DashboardPage() {
           </p>
         </div>
         {user?.role === 'admin' && (
-          <Button>
-            <PlusCircle className="mr-2 h-4 w-4" /> Add New Task
-          </Button>
+           <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+            <DialogTrigger asChild>
+                <Button>
+                    <PlusCircle className="mr-2 h-4 w-4" /> Add New Task
+                </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[480px]">
+                <DialogHeader>
+                    <DialogTitle>Create a new task</DialogTitle>
+                    <DialogDescription>
+                        Fill in the details below to assign a new task to a team member.
+                    </DialogDescription>
+                </DialogHeader>
+                <AddTaskForm users={users} onSuccess={handleAddTask} />
+            </DialogContent>
+          </Dialog>
         )}
       </div>
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
@@ -149,10 +201,16 @@ export default function DashboardPage() {
               </div>
               <CardDescription>{task.dueDate}</CardDescription>
             </CardHeader>
-            <CardContent className="flex-grow">
+            <CardContent className="flex-grow space-y-3">
               <p className="text-sm text-muted-foreground">
                 {task.description}
               </p>
+               {task.assigneeName && (
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <UserCircle className="h-4 w-4" />
+                    <span>Assigned to {task.assigneeName}</span>
+                </div>
+              )}
             </CardContent>
             <CardFooter>
             {user?.role !== 'admin' && (
