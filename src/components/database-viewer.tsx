@@ -20,7 +20,7 @@ import {
 import { getUsers, updateUserRole, type SanitizedUser, updateUserSuperUserStatus } from '@/lib/auth';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
-import { Database } from 'lucide-react';
+import { Database, PlusCircle } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -30,10 +30,21 @@ import {
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { Switch } from '@/components/ui/switch';
+import { Button } from './ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from './ui/dialog';
+import { AddUserForm } from './add-user-form';
 
 export function DatabaseViewer() {
   const [users, setUsers] = useState<SanitizedUser[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isAddUserDialogOpen, setIsAddUserDialogOpen] = useState(false);
   const { toast } = useToast();
 
   const fetchUsers = async () => {
@@ -101,18 +112,40 @@ export function DatabaseViewer() {
     }
   };
 
+  const handleUserAdded = () => {
+    setIsAddUserDialogOpen(false);
+    fetchUsers();
+  };
 
   return (
     <Card className="mt-6">
       <CardHeader>
-        <div className="flex items-center gap-4">
-          <Database className="w-8 h-8 text-primary" />
-          <div>
-            <CardTitle>Mock Database Viewer</CardTitle>
-            <CardDescription>
-              A view of the current users in the mock database. You can change user roles here.
-            </CardDescription>
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <Database className="w-8 h-8 text-primary" />
+            <div>
+              <CardTitle>Mock Database Viewer</CardTitle>
+              <CardDescription>
+                A view of the current users. Admins can add users and manage roles.
+              </CardDescription>
+            </div>
           </div>
+           <Dialog open={isAddUserDialogOpen} onOpenChange={setIsAddUserDialogOpen}>
+            <DialogTrigger asChild>
+                <Button>
+                    <PlusCircle className="mr-2 h-4 w-4" /> Add User
+                </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[425px]">
+                <DialogHeader>
+                    <DialogTitle>Add New User</DialogTitle>
+                    <DialogDescription>
+                        Manually create a new user account. The default password is 'DefaultPassword123'.
+                    </DialogDescription>
+                </DialogHeader>
+                <AddUserForm onSuccess={handleUserAdded} />
+            </DialogContent>
+          </Dialog>
         </div>
       </CardHeader>
       <CardContent>

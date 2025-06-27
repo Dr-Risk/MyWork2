@@ -74,7 +74,10 @@ const CreateUserSchema = z.object({
 
 type CreateUserInput = z.infer<typeof CreateUserSchema>;
 
-export const createUser = async (userData: CreateUserInput): Promise<{ success: boolean; message: string }> => {
+export const createUser = async (
+  userData: CreateUserInput,
+  role: 'full-time' | 'contractor' = 'full-time'
+): Promise<{ success: boolean; message: string }> => {
     if (users[userData.username]) {
         return { success: false, message: "Username already exists." };
     }
@@ -84,7 +87,7 @@ export const createUser = async (userData: CreateUserInput): Promise<{ success: 
     users[userData.username] = {
         username: userData.username,
         passwordHash: `${userData.password}_hashed`,
-        role: 'full-time', 
+        role: role, 
         name: userData.name,
         initials: initials,
         email: userData.email,
