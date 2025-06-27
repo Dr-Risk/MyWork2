@@ -26,7 +26,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { SanitizedUser } from "@/lib/auth";
-import type { Task } from "@/app/dashboard/page";
+import type { Task } from "@/lib/tasks";
 
 const formSchema = z.object({
   title: z.string().min(3, { message: "Title must be at least 3 characters." }),

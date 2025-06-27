@@ -7,7 +7,9 @@ import { Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useState, useMemo, useEffect } from "react";
-import type { Task } from "@/app/dashboard/page";
+import type { Task } from "@/lib/tasks";
+import { initialTasks } from "@/lib/tasks";
+
 
 export default function UsersPage() {
     const { user, isLoading } = useAuth();
@@ -15,27 +17,54 @@ export default function UsersPage() {
     const [isTasksLoaded, setIsTasksLoaded] = useState(false);
 
     useEffect(() => {
+        // This effect runs once on mount to load and reconcile tasks.
         try {
-            // Note: This page now reads from 'appTasks', the same central task
-            // list used by the main dashboard, to ensure data is unified.
-            const storedTasks = localStorage.getItem('appTasks');
-            if (storedTasks) {
-                setTasks(JSON.parse(storedTasks));
-            }
+          const storedTasksJSON = localStorage.getItem('appTasks');
+          // Start with the tasks from local storage, or an empty array.
+          const storedTasks = storedTasksJSON ? (JSON.parse(storedTasksJSON) as Task[]) : [];
+          
+          // Use a Map for efficient lookup and updating.
+          const tasksMap = new Map<number, Task>();
+          
+          // First, add all stored tasks to the map. These might be user-created or older versions of default tasks.
+          for (const task of storedTasks) {
+            tasksMap.set(task.id, task);
+          }
+          
+          // Then, iterate through the initial (default) tasks from the code.
+          // This will ADD any new default tasks and OVERWRITE any stored default tasks
+          // with the latest version from the code. This ensures consistency and fixes stale data.
+          for (const initialTask of initialTasks) {
+            tasksMap.set(initialTask.id, initialTask);
+          }
+    
+          // The final task list is the values from the map.
+          const finalTasks = Array.from(tasksMap.values());
+          
+          setTasks(finalTasks);
+          
         } catch (error) {
-            console.error("Failed to load tasks from localStorage", error);
-            setTasks([]);
+          console.error("Failed to load tasks, falling back to initial set.", error);
+          // If anything goes wrong, just use the initial tasks.
+          setTasks(initialTasks);
+        } finally {
+          setIsTasksLoaded(true);
         }
-        setIsTasksLoaded(true);
-    }, []);
+    }, []); // Run only on initial component mount.
+
+    useEffect(() => {
+        // This effect saves the tasks to localStorage whenever they change.
+        // The isTasksLoaded flag prevents saving an empty initial array before loading.
+        if (isTasksLoaded) {
+            localStorage.setItem('appTasks', JSON.stringify(tasks));
+        }
+    }, [tasks, isTasksLoaded]);
 
     const handleCompleteTask = (taskId: number) => {
         const updatedTasks = tasks.map((task) =>
           task.id === taskId ? { ...task, status: "Completed" } : task
         );
         setTasks(updatedTasks);
-        // Persist the change to the unified task list in localStorage
-        localStorage.setItem('appTasks', JSON.stringify(updatedTasks));
     };
 
     const myTasks = useMemo(() => {

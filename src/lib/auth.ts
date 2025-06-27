@@ -59,7 +59,7 @@ const initialUsers: { [key: string]: UserWithPassword } = {
   'utaker': {
     username: 'utaker',
     passwordHash: 'meditask_hashed', // Corresponds to 'meditask'
-    role: 'full-time',
+    role: 'contractor',
     name: 'Utaker',
     initials: 'U',
     email: 'utaker@example.com',
