@@ -46,40 +46,50 @@ export default function DashboardPage() {
   const isPrivilegedUser = user?.role === 'admin' || !!user?.isSuperUser;
   
   useEffect(() => {
-    // This effect runs once on mount to load and reconcile tasks.
-    try {
-      const storedTasksJSON = localStorage.getItem('appTasks');
-      // Start with the tasks from local storage, or an empty array.
-      const storedTasks = storedTasksJSON ? (JSON.parse(storedTasksJSON) as Task[]) : [];
-      
-      // Use a Map for efficient lookup and updating.
-      const tasksMap = new Map<number, Task>();
-      
-      // First, add all stored tasks to the map. These might be user-created or older versions of default tasks.
-      for (const task of storedTasks) {
-        tasksMap.set(task.id, task);
-      }
-      
-      // Then, iterate through the initial (default) tasks from the code.
-      // This will ADD any new default tasks and OVERWRITE any stored default tasks
-      // with the latest version from the code. This ensures consistency and fixes stale data.
-      for (const initialTask of initialTasks) {
-        tasksMap.set(initialTask.id, initialTask);
-      }
+    async function loadData() {
+      try {
+        // Fetch users first if privileged
+        let userList: SanitizedUser[] = [];
+        if (isPrivilegedUser) {
+          userList = await getUsers();
+          setUsers(userList);
+        }
+        const existingUsernames = new Set(userList.map(u => u.username));
 
-      // The final task list is the values from the map.
-      const finalTasks = Array.from(tasksMap.values());
-      
-      setTasks(finalTasks);
-      
-    } catch (error) {
-      console.error("Failed to load tasks, falling back to initial set.", error);
-      // If anything goes wrong, just use the initial tasks.
-      setTasks(initialTasks);
-    } finally {
-      setIsTasksLoaded(true);
+        // Load and reconcile tasks
+        const storedTasksJSON = localStorage.getItem('appTasks');
+        const storedTasks = storedTasksJSON ? (JSON.parse(storedTasksJSON) as Task[]) : [];
+        
+        const tasksMap = new Map<number, Task>();
+        
+        for (const task of storedTasks) {
+          tasksMap.set(task.id, task);
+        }
+        
+        for (const initialTask of initialTasks) {
+          tasksMap.set(initialTask.id, initialTask);
+        }
+
+        let finalTasks = Array.from(tasksMap.values());
+
+        // For privileged users, filter out tasks assigned to non-existent users
+        if (isPrivilegedUser) {
+          finalTasks = finalTasks.filter(task => !task.assignee || existingUsernames.has(task.assignee));
+        }
+        
+        setTasks(finalTasks);
+      } catch (error) {
+        console.error("Failed to load data, falling back to initial set.", error);
+        setTasks(initialTasks);
+      } finally {
+        setIsTasksLoaded(true);
+      }
     }
-  }, []); // Run only on initial component mount.
+
+    if (!isLoading) {
+      loadData();
+    }
+  }, [isPrivilegedUser, isLoading]);
 
   useEffect(() => {
     // This effect saves the tasks to localStorage whenever they change.
@@ -88,16 +98,6 @@ export default function DashboardPage() {
       localStorage.setItem('appTasks', JSON.stringify(tasks));
     }
   }, [tasks, isTasksLoaded]);
-
-  useEffect(() => {
-    async function fetchUsers() {
-      if (isPrivilegedUser) {
-        const userList = await getUsers();
-        setUsers(userList);
-      }
-    }
-    fetchUsers();
-  }, [isPrivilegedUser]);
 
   const handleCompleteTask = (taskId: number) => {
     setTasks((currentTasks) =>
