@@ -354,9 +354,13 @@ export default function DashboardPage() {
         </div>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 mt-4">
-          {myTasks.map((task) => (
-            <TaskCard key={task.id} task={task} />
-          ))}
+          {myTasks.length > 0 ? (
+            myTasks.map((task) => (
+              <TaskCard key={task.id} task={task} />
+            ))
+          ) : (
+            <p className="text-muted-foreground col-span-full">You have no tasks assigned.</p>
+          )}
         </div>
       )}
     </>
