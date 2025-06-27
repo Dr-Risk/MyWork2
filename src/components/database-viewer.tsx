@@ -17,10 +17,10 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { getUsers, updateUserRole, type SanitizedUser, updateUserSuperUserStatus, unlockUserAccount, removeUser } from '@/lib/auth';
+import { getUsers, updateUserRole, type SanitizedUser, updateUserSuperUserStatus, lockUserAccount, unlockUserAccount, removeUser } from '@/lib/auth';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
-import { Database, PlusCircle, LockOpen, Trash2 } from 'lucide-react';
+import { Database, PlusCircle, Lock, LockOpen, Trash2 } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -30,7 +30,7 @@ import {
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { Switch } from '@/components/ui/switch';
-import { Button } from './ui/button';
+import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -38,8 +38,8 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from './ui/dialog';
-import { AddUserForm } from './add-user-form';
+} from '@/components/ui/dialog';
+import { AddUserForm } from '@/components/add-user-form';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -121,6 +121,23 @@ export function DatabaseViewer() {
         });
         // We need to refetch to revert the switch state visually on failure
         await fetchUsers(); 
+    }
+  };
+
+  const handleLockUser = async (username: string) => {
+    const response = await lockUserAccount(username);
+    if (response.success) {
+      toast({
+        title: 'Success',
+        description: response.message,
+      });
+      fetchUsers();
+    } else {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: response.message,
+      });
     }
   };
 
@@ -268,7 +285,7 @@ export function DatabaseViewer() {
                             </SelectContent>
                           </Select>
 
-                           {user.isLocked && (
+                          {user.isLocked ? (
                                 <Button
                                     variant="outline"
                                     size="sm"
@@ -276,6 +293,15 @@ export function DatabaseViewer() {
                                 >
                                     <LockOpen className="mr-2 h-4 w-4" />
                                     Unlock
+                                </Button>
+                            ) : (
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleLockUser(user.username)}
+                                >
+                                    <Lock className="mr-2 h-4 w-4" />
+                                    Lock
                                 </Button>
                             )}
 
