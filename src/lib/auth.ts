@@ -32,18 +32,6 @@ const initialUsers: { [key: string]: UserWithPassword } = {
     passwordLastChanged: new Date().toISOString(),
     isSuperUser: true,
   },
-  'casey.white': {
-    username: 'casey.white',
-    passwordHash: 'meditask_hashed', // Corresponds to 'meditask'
-    role: 'full-time',
-    name: 'Dr. Casey White',
-    initials: 'CW',
-    email: 'casey.white@health.org',
-    loginAttempts: 0,
-    isLocked: false,
-    passwordLastChanged: new Date().toISOString(),
-    isSuperUser: false,
-  },
   'john.doe': {
     username: 'john.doe',
     passwordHash: 'meditask_hashed', // Corresponds to 'meditask'
