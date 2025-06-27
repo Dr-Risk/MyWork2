@@ -7,9 +7,20 @@ import { Users } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 
-const initialContractorTasks = [
+export type Task = {
+    id: number;
+    title: string;
+    description: string;
+    priority: "High" | "Medium" | "Low";
+    dueDate: string;
+    status: "Pending" | "Completed";
+    assignee?: string;
+    assigneeName?: string;
+};
+
+const initialContractorTasks: Task[] = [
     {
         id: 1,
         title: "Transcribe Patient Interview Notes",
@@ -17,6 +28,7 @@ const initialContractorTasks = [
         priority: "High",
         dueDate: "Today",
         status: "Pending",
+        assignee: "john.doe",
     },
     {
         id: 2,
@@ -25,14 +37,25 @@ const initialContractorTasks = [
         priority: "Medium",
         dueDate: "Tomorrow",
         status: "Pending",
+        assignee: "john.doe",
     },
     {
         id: 3,
         title: "Verify Insurance Information",
-        description: "Check and update insurance details for patients scheduled this week.",
+        description: "Check and update insurance details for patients scheduled for next week.",
+        priority: "High",
+        dueDate: "This Week",
+        status: "Pending",
+        assignee: "other.contractor", // This task should not be visible to john.doe
+    },
+     {
+        id: 4,
+        title: "Update transcription software",
+        description: "Install the latest version of the transcription software on the workstation.",
         priority: "Low",
         dueDate: "This Week",
         status: "Completed",
+        assignee: "john.doe",
     },
 ];
 
@@ -47,6 +70,12 @@ export default function UsersPage() {
           )
         );
       };
+
+    const myTasks = useMemo(() => {
+        if (!user) return [];
+        return tasks.filter(task => task.assignee === user.username);
+    }, [tasks, user]);
+
 
     // The main layout handles the primary loading state.
     // We only need to differentiate between roles here.
@@ -66,7 +95,7 @@ export default function UsersPage() {
                     </p>
                 </div>
                 <div className="grid gap-4 mt-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                    {tasks.map((task) => (
+                    {myTasks.length > 0 ? myTasks.map((task) => (
                         <Card key={task.id} className="flex flex-col">
                             <CardHeader>
                                 <div className="flex justify-between items-start">
@@ -104,7 +133,9 @@ export default function UsersPage() {
                                 </Button>
                             </CardFooter>
                         </Card>
-                    ))}
+                    )) : (
+                        <p className="text-muted-foreground col-span-full">You have no tasks assigned.</p>
+                    )}
                 </div>
             </>
         )
