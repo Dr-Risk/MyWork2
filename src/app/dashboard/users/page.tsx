@@ -4,10 +4,9 @@
 import { useAuth } from "@/context/auth-context";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Users } from "lucide-react";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 
 export type Task = {
     id: number;
@@ -61,7 +60,30 @@ const initialContractorTasks: Task[] = [
 
 export default function UsersPage() {
     const { user, isLoading } = useAuth();
-    const [tasks, setTasks] = useState(initialContractorTasks);
+    const [tasks, setTasks] = useState<Task[]>([]);
+    const [isTasksLoaded, setIsTasksLoaded] = useState(false);
+
+    useEffect(() => {
+        try {
+            const storedTasks = localStorage.getItem('appContractorTasks');
+            if (storedTasks) {
+                setTasks(JSON.parse(storedTasks));
+            } else {
+                setTasks(initialContractorTasks);
+                localStorage.setItem('appContractorTasks', JSON.stringify(initialContractorTasks));
+            }
+        } catch (error) {
+            console.error("Failed to process contractor tasks from localStorage", error);
+            setTasks(initialContractorTasks);
+        }
+        setIsTasksLoaded(true);
+    }, []);
+
+    useEffect(() => {
+        if (isTasksLoaded) {
+            localStorage.setItem('appContractorTasks', JSON.stringify(tasks));
+        }
+    }, [tasks, isTasksLoaded]);
 
     const handleCompleteTask = (taskId: number) => {
         setTasks((currentTasks) =>
@@ -79,7 +101,7 @@ export default function UsersPage() {
 
     // The main layout handles the primary loading state.
     // We only need to differentiate between roles here.
-    if (isLoading) {
+    if (isLoading || !isTasksLoaded) {
         return null;
     }
     

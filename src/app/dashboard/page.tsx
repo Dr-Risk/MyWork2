@@ -117,12 +117,35 @@ const initialTasks: Task[] = [
 export default function DashboardPage() {
   const { user, isLoading } = useAuth();
   const router = useRouter();
-  const [tasks, setTasks] = useState<Task[]>(initialTasks);
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [isTasksLoaded, setIsTasksLoaded] = useState(false);
   const [users, setUsers] = useState<SanitizedUser[]>([]);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const { toast } = useToast();
 
   const isPrivilegedUser = user?.role === 'admin' || !!user?.isSuperUser;
+  
+  useEffect(() => {
+    try {
+      const storedTasks = localStorage.getItem('appTasks');
+      if (storedTasks) {
+        setTasks(JSON.parse(storedTasks));
+      } else {
+        setTasks(initialTasks);
+        localStorage.setItem('appTasks', JSON.stringify(initialTasks));
+      }
+    } catch (error) {
+      console.error("Failed to process tasks from localStorage", error);
+      setTasks(initialTasks);
+    }
+    setIsTasksLoaded(true);
+  }, []);
+
+  useEffect(() => {
+    if (isTasksLoaded) {
+      localStorage.setItem('appTasks', JSON.stringify(tasks));
+    }
+  }, [tasks, isTasksLoaded]);
 
   useEffect(() => {
     async function fetchUsers() {
@@ -178,7 +201,7 @@ export default function DashboardPage() {
     return tasks.filter(task => task.assignee === user.username);
   }, [tasks, user, isPrivilegedUser]);
 
-  if (isLoading || user?.role === 'contractor') {
+  if (isLoading || !isTasksLoaded) {
     return (
       <>
         <div className="flex items-center justify-between">
@@ -207,6 +230,10 @@ export default function DashboardPage() {
         </div>
       </>
     );
+  }
+
+  if (user?.role === 'contractor') {
+      return null;
   }
 
   const TaskCard = ({ task }: { task: Task }) => (
