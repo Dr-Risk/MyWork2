@@ -35,8 +35,16 @@ import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { createUser } from "@/lib/auth";
 
-// Per NIST guidelines, password length is the most important factor.
-// This schema enforces a minimum length and ensures passwords match.
+/**
+ * [SECURITY] Defines the validation schema for the signup form.
+ *
+ * NIST Special Publication 800-63B Guidelines on Passwords:
+ * - Length is the most important factor. A minimum of 8 characters is a
+ *   reasonable baseline.
+ * - Complexity requirements (e.g., forcing symbols, numbers, uppercase) are
+ *   no longer recommended as they often lead to predictable and less secure passwords.
+ * - Checking passwords against a list of known-breached passwords is highly recommended.
+ */
 const formSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters." }),
   username: z.string().min(3, { message: "Username must be at least 3 characters." }),
@@ -50,6 +58,7 @@ export function SignupForm() {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
+  // Initialize the form with react-hook-form and Zod for validation.
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -60,14 +69,17 @@ export function SignupForm() {
     },
   });
 
+  // Handles the form submission logic.
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
     try {
+      // Calls the mock server action to create a new user.
       const response = await createUser(values, values.role);
       if (response.success) {
-        // Redirect to email verification page
+        // If successful, redirect to the email verification page.
         router.push("/verify-email");
       } else {
+        // If creation fails (e.g., username exists), show an error toast.
         toast({
           variant: "destructive",
           title: "Sign Up Failed",

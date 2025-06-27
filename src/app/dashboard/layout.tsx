@@ -16,6 +16,8 @@ import {
 import { useAuth } from "@/context/auth-context";
 import { cn } from "@/lib/utils";
 
+// This is the main layout for the authenticated part of the application.
+// It includes the sidebar, header, and main content area.
 export default function DashboardLayout({
   children,
 }: {
@@ -26,11 +28,24 @@ export default function DashboardLayout({
   const [isCollapsed, setIsCollapsed] = useState(false);
 
   useEffect(() => {
+    /**
+     * [SECURITY] This is a client-side route protection check.
+     *
+     * OWASP Recommendation (A01 - Broken Access Control):
+     * While client-side checks are good for user experience (e.g., quick redirects),
+     * they are not a substitute for server-side authorization. A malicious actor
+     * could bypass this client-side code.
+     *
+     * In a production application, every page load and API request for protected
+     * resources must be verified on the server to ensure the user has a valid
+     * session and the necessary permissions.
+     */
     if (!isLoading && !user) {
       router.replace("/");
     }
   }, [user, isLoading, router]);
 
+  // Display a loading spinner while the authentication state is being determined.
   if (isLoading || !user) {
     return (
       <div className="flex min-h-screen w-full items-center justify-center bg-background">
@@ -39,11 +54,13 @@ export default function DashboardLayout({
     );
   }
   
+  // The main layout grid, which adjusts based on the sidebar's collapsed state.
   return (
     <div className={cn(
       "grid min-h-screen w-full transition-all",
       isCollapsed ? "md:grid-cols-[64px_1fr]" : "md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]"
     )}>
+      {/* Sidebar for desktop view */}
       <div className="hidden border-r bg-card md:block">
         <div className="flex h-full max-h-screen flex-col">
           <div className="flex h-14 shrink-0 items-center border-b px-4 lg:h-[60px] lg:px-6">
@@ -72,7 +89,9 @@ export default function DashboardLayout({
         </div>
       </div>
       <div className="flex flex-col">
+        {/* Header for main content area */}
         <header className="flex h-14 items-center gap-4 border-b bg-card px-4 lg:h-[60px] lg:px-6">
+          {/* Mobile navigation toggle (hamburger menu) */}
           <Sheet>
             <SheetTrigger asChild>
               <Button
@@ -102,6 +121,7 @@ export default function DashboardLayout({
           </div>
           <UserNav />
         </header>
+        {/* Main content area where child pages are rendered */}
         <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6 bg-background">
           {children}
         </main>

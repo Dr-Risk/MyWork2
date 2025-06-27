@@ -29,9 +29,12 @@ import { Loader2 } from "lucide-react";
 import { checkCredentials } from "@/lib/auth";
 import { useAuth } from "@/context/auth-context";
 
+// This schema defines the validation rules for the login form fields
+// using Zod. It ensures that the data has a valid format before submission.
 const formSchema = z.object({
   username: z.string()
     .min(1, { message: "Please enter your username." })
+    // Basic regex to prevent obviously malicious input, though server-side validation is key.
     .regex(/^[a-zA-Z0-9_.-]+$/, "Username contains invalid characters."),
   password: z.string().min(8, {
     message: "Password must be at least 8 characters.",
@@ -44,6 +47,7 @@ export function LoginForm() {
   const [isLoading, setIsLoading] = useState(false);
   const { setUser } = useAuth();
 
+  // Initialize the form with react-hook-form and Zod resolver.
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -52,18 +56,25 @@ export function LoginForm() {
     },
   });
 
+  // This function is called when the form is submitted.
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
     
-    // Simulate network delay
+    // Simulate network delay to mimic a real API call.
     await new Promise((resolve) => setTimeout(resolve, 500));
 
+    /**
+     * [SECURITY] In a real application, this entire submission must be sent
+     * over HTTPS to encrypt the credentials in transit, protecting against
+     * man-in-the-middle attacks.
+     */
     const response = await checkCredentials(values.username, values.password);
     setIsLoading(false);
 
+    // Handle the different authentication responses.
     switch (response.status) {
       case 'success':
-        setUser(response.user);
+        setUser(response.user); // Update the global auth context.
         toast({
           title: "Login Successful",
           description: "Redirecting to your dashboard...",
@@ -77,12 +88,13 @@ export function LoginForm() {
           title: "Password Expired",
           description: response.message,
         });
-        // In a real app, you might pass user info to this page securely
+        // Redirect to the password change page.
         router.push("/change-password");
         break;
 
       case 'locked':
       case 'invalid':
+        // Show a generic failure message for locked or invalid credentials.
         toast({
           variant: "destructive",
           title: "Login Failed",
