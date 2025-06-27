@@ -129,16 +129,26 @@ export default function DashboardPage() {
     // This effect runs once on mount to load and reconcile tasks.
     try {
       const storedTasksJSON = localStorage.getItem('appTasks');
+      // Start with the tasks from local storage, or an empty array.
       const storedTasks = storedTasksJSON ? (JSON.parse(storedTasksJSON) as Task[]) : [];
       
-      // Create a Set of IDs from the tasks stored in localStorage
-      const storedTaskIds = new Set(storedTasks.map(task => task.id));
+      // Use a Map for efficient lookup and updating.
+      const tasksMap = new Map<number, Task>();
       
-      // Filter initialTasks to get only those that are NOT already in storage.
-      const newInitialTasks = initialTasks.filter(task => !storedTaskIds.has(task.id));
+      // First, add all stored tasks to the map. These might be user-created or older versions of default tasks.
+      for (const task of storedTasks) {
+        tasksMap.set(task.id, task);
+      }
       
-      // The final task list is the combination of stored tasks and any new default tasks.
-      const finalTasks = [...storedTasks, ...newInitialTasks];
+      // Then, iterate through the initial (default) tasks from the code.
+      // This will ADD any new default tasks and OVERWRITE any stored default tasks
+      // with the latest version from the code. This ensures consistency and fixes stale data.
+      for (const initialTask of initialTasks) {
+        tasksMap.set(initialTask.id, initialTask);
+      }
+
+      // The final task list is the values from the map.
+      const finalTasks = Array.from(tasksMap.values());
       
       setTasks(finalTasks);
       
@@ -378,5 +388,3 @@ export default function DashboardPage() {
     </>
   );
 }
-
-    
