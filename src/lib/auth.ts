@@ -193,9 +193,17 @@ export const updateUserRole = async (
   }
 
   user.role = newRole;
+  let message = 'User role updated successfully.';
+
+  // If the user is being changed to a contractor, revoke super user status.
+  if (newRole === 'contractor' && user.isSuperUser) {
+    user.isSuperUser = false;
+    message = 'Role updated to Contractor. Super user status was revoked.';
+  }
+
   console.log(`User '${username}' role updated to '${newRole}' in mock database.`);
 
-  return { success: true, message: 'User role updated successfully.' };
+  return { success: true, message };
 };
 
 export const updateUserProfile = async (
@@ -254,6 +262,10 @@ export const updateUserSuperUserStatus = async (
 
   if (user.role === 'admin') {
     return { success: false, message: 'Cannot change super user status for an admin.' };
+  }
+
+  if (user.role === 'contractor' && isSuperUser) {
+    return { success: false, message: 'Contractors cannot be granted super user status.' };
   }
 
   user.isSuperUser = isSuperUser;

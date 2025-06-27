@@ -182,6 +182,7 @@ export function DatabaseViewer() {
                               <Switch
                                   id={`superuser-switch-${user.username}`}
                                   checked={!!user.isSuperUser}
+                                  disabled={user.role === 'contractor'}
                                   onCheckedChange={(checked) => handleSuperUserChange(user.username, checked)}
                                   aria-label={`Toggle super user status for ${user.username}`}
                               />
