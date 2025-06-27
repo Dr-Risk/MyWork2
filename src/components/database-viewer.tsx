@@ -17,10 +17,10 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { getUsers, updateUserRole, type SanitizedUser, updateUserSuperUserStatus } from '@/lib/auth';
+import { getUsers, updateUserRole, type SanitizedUser, updateUserSuperUserStatus, unlockUserAccount } from '@/lib/auth';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
-import { Database, PlusCircle } from 'lucide-react';
+import { Database, PlusCircle, LockOpen } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -112,6 +112,23 @@ export function DatabaseViewer() {
     }
   };
 
+  const handleUnlockUser = async (username: string) => {
+    const response = await unlockUserAccount(username);
+    if (response.success) {
+      toast({
+        title: 'Success',
+        description: response.message,
+      });
+      fetchUsers();
+    } else {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: response.message,
+      });
+    }
+  };
+
   const handleUserAdded = () => {
     setIsAddUserDialogOpen(false);
     fetchUsers();
@@ -193,7 +210,19 @@ export function DatabaseViewer() {
                     </TableCell>
                     <TableCell>
                       {user.isLocked ? (
-                        <Badge variant="destructive">Locked</Badge>
+                        <div className="flex items-center gap-2">
+                          <Badge variant="destructive">Locked</Badge>
+                          {user.role !== 'admin' && (
+                             <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleUnlockUser(user.username)}
+                              >
+                                <LockOpen className="mr-2 h-4 w-4" />
+                                Unlock
+                              </Button>
+                          )}
+                        </div>
                       ) : (
                         <Badge variant="outline">Active</Badge>
                       )}

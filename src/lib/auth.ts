@@ -273,3 +273,23 @@ export const updateUserSuperUserStatus = async (
 
   return { success: true, message: 'Super user status updated successfully.' };
 };
+
+export const unlockUserAccount = async (
+  username: string
+): Promise<{ success: boolean; message: string }> => {
+  const user = users[username];
+
+  if (!user) {
+    return { success: false, message: 'User not found.' };
+  }
+
+  if (user.role === 'admin') {
+      return { success: false, message: 'Admin accounts cannot be locked.' };
+  }
+
+  user.isLocked = false;
+  user.loginAttempts = 0;
+  console.log(`User account for '${username}' has been unlocked.`);
+
+  return { success: true, message: 'User account unlocked successfully.' };
+};
