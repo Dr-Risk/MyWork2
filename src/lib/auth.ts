@@ -55,6 +55,18 @@ const initialUsers: { [key: string]: UserWithPassword } = {
     isLocked: true,
     passwordLastChanged: new Date(new Date().setDate(new Date().getDate() - 91)).toISOString(),
     isSuperUser: false,
+  },
+  'utaker': {
+    username: 'utaker',
+    passwordHash: 'meditask_hashed', // Corresponds to 'meditask'
+    role: 'full-time',
+    name: 'Utaker',
+    initials: 'U',
+    email: 'utaker@example.com',
+    loginAttempts: 0,
+    isLocked: false,
+    passwordLastChanged: new Date().toISOString(),
+    isSuperUser: false,
   }
 };
 

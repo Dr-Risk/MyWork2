@@ -102,6 +102,16 @@ const initialTasks: Task[] = [
     dueDate: "This Week",
     status: "Pending",
   },
+  {
+    id: 7,
+    title: "Follow up with patient",
+    description: "Check in on the patient from yesterday's appointment.",
+    priority: "Medium",
+    dueDate: "Today",
+    status: "Pending",
+    assignee: 'utaker',
+    assigneeName: 'Utaker',
+  },
 ];
 
 export default function DashboardPage() {
