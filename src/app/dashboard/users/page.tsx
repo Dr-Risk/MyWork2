@@ -7,56 +7,7 @@ import { Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useState, useMemo, useEffect } from "react";
-
-export type Task = {
-    id: number;
-    title: string;
-    description: string;
-    priority: "High" | "Medium" | "Low";
-    dueDate: string;
-    status: "Pending" | "Completed";
-    assignee?: string;
-    assigneeName?: string;
-};
-
-const initialContractorTasks: Task[] = [
-    {
-        id: 1,
-        title: "Transcribe Patient Interview Notes",
-        description: "Transcribe audio recording from Dr. White's interview with patient Smith.",
-        priority: "High",
-        dueDate: "Today",
-        status: "Pending",
-        assignee: "john.doe",
-    },
-    {
-        id: 2,
-        title: "Data Entry: Lab Results",
-        description: "Enter results from the latest batch of blood tests into the patient portal.",
-        priority: "Medium",
-        dueDate: "Tomorrow",
-        status: "Pending",
-        assignee: "john.doe",
-    },
-    {
-        id: 3,
-        title: "Verify Insurance Information",
-        description: "Check and update insurance details for patients scheduled for next week.",
-        priority: "High",
-        dueDate: "This Week",
-        status: "Pending",
-        assignee: "other.contractor", // This task should not be visible to john.doe
-    },
-     {
-        id: 4,
-        title: "Update transcription software",
-        description: "Install the latest version of the transcription software on the workstation.",
-        priority: "Low",
-        dueDate: "This Week",
-        status: "Completed",
-        assignee: "john.doe",
-    },
-];
+import type { Task } from "@/app/dashboard/page";
 
 export default function UsersPage() {
     const { user, isLoading } = useAuth();
@@ -65,33 +16,27 @@ export default function UsersPage() {
 
     useEffect(() => {
         try {
-            const storedTasks = localStorage.getItem('appContractorTasks');
+            // Note: This page now reads from 'appTasks', the same central task
+            // list used by the main dashboard, to ensure data is unified.
+            const storedTasks = localStorage.getItem('appTasks');
             if (storedTasks) {
                 setTasks(JSON.parse(storedTasks));
-            } else {
-                setTasks(initialContractorTasks);
-                localStorage.setItem('appContractorTasks', JSON.stringify(initialContractorTasks));
             }
         } catch (error) {
-            console.error("Failed to process contractor tasks from localStorage", error);
-            setTasks(initialContractorTasks);
+            console.error("Failed to load tasks from localStorage", error);
+            setTasks([]);
         }
         setIsTasksLoaded(true);
     }, []);
 
-    useEffect(() => {
-        if (isTasksLoaded) {
-            localStorage.setItem('appContractorTasks', JSON.stringify(tasks));
-        }
-    }, [tasks, isTasksLoaded]);
-
     const handleCompleteTask = (taskId: number) => {
-        setTasks((currentTasks) =>
-          currentTasks.map((task) =>
-            task.id === taskId ? { ...task, status: "Completed" } : task
-          )
+        const updatedTasks = tasks.map((task) =>
+          task.id === taskId ? { ...task, status: "Completed" } : task
         );
-      };
+        setTasks(updatedTasks);
+        // Persist the change to the unified task list in localStorage
+        localStorage.setItem('appTasks', JSON.stringify(updatedTasks));
+    };
 
     const myTasks = useMemo(() => {
         if (!user) return [];
