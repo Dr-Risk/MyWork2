@@ -51,8 +51,8 @@ const initialUsers: { [key: string]: UserWithPassword } = {
     name: 'John Doe',
     initials: 'JD',
     email: 'john.doe@contractor.com',
-    loginAttempts: 0,
-    isLocked: false,
+    loginAttempts: 3,
+    isLocked: true,
     passwordLastChanged: new Date(new Date().setDate(new Date().getDate() - 91)).toISOString(),
     isSuperUser: false,
   }
