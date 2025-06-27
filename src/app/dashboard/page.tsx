@@ -127,15 +127,31 @@ export default function DashboardPage() {
   
   useEffect(() => {
     try {
-      const storedTasks = localStorage.getItem('appTasks');
-      if (storedTasks) {
-        setTasks(JSON.parse(storedTasks));
+      const storedTasksJSON = localStorage.getItem('appTasks');
+      let finalTasks: Task[];
+
+      if (storedTasksJSON) {
+        // If there's stored data, use it as the base.
+        const storedTasks = JSON.parse(storedTasksJSON) as Task[];
+        
+        // Create a Set of existing task IDs for efficient lookup.
+        const existingIds = new Set(storedTasks.map(t => t.id));
+
+        // Find any initial tasks that are NOT already in the stored tasks.
+        const missingInitialTasks = initialTasks.filter(it => !existingIds.has(it.id));
+
+        // Combine the stored tasks with any missing initial tasks.
+        finalTasks = [...storedTasks, ...missingInitialTasks];
+
       } else {
-        setTasks(initialTasks);
-        localStorage.setItem('appTasks', JSON.stringify(initialTasks));
+        // If no stored data, use the initial tasks.
+        finalTasks = initialTasks;
       }
+      
+      setTasks(finalTasks);
     } catch (error) {
       console.error("Failed to process tasks from localStorage", error);
+      // On error, fall back to initial tasks.
       setTasks(initialTasks);
     }
     setIsTasksLoaded(true);
