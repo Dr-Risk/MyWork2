@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/context/auth-context";
 import { Skeleton } from "./ui/skeleton";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
 
 const mainNavItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -34,7 +35,7 @@ const secondaryNavItems = [
   { href: "/dashboard/settings", label: "Settings", icon: Settings },
 ];
 
-export function SidebarNav() {
+export function SidebarNav({ isCollapsed = false }: { isCollapsed?: boolean }) {
   const pathname = usePathname();
   const { user, isLoading } = useAuth();
 
@@ -47,19 +48,35 @@ export function SidebarNav() {
       item.href === "/dashboard"
         ? pathname === item.href
         : pathname.startsWith(item.href);
-    return (
-      <Link
-        key={item.label}
-        href={item.href}
-        className={cn(
-          "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary",
-          isActive && "bg-muted text-primary"
-        )}
-      >
-        <item.icon className="h-4 w-4" />
-        {item.label}
-      </Link>
+    
+    const link = (
+        <Link
+            href={item.href}
+            className={cn(
+              "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary",
+              isActive && "bg-muted text-primary",
+              isCollapsed && "justify-center"
+            )}
+        >
+            <item.icon className="h-4 w-4" />
+            <span className={cn(isCollapsed && "sr-only")}>{item.label}</span>
+        </Link>
     );
+
+    if (isCollapsed) {
+        return (
+            <Tooltip key={item.label}>
+                <TooltipTrigger asChild>
+                    {link}
+                </TooltipTrigger>
+                <TooltipContent side="right">
+                    {item.label}
+                </TooltipContent>
+            </Tooltip>
+        );
+    }
+    
+    return link;
   };
 
   if (isLoading) {
@@ -104,7 +121,7 @@ export function SidebarNav() {
     );
   }
 
-  return (
+  const navContainer = (
     <div className="flex h-full flex-col justify-between">
       <nav className="grid items-start px-2 pt-4 text-sm font-medium lg:px-4">
         {visibleMainNavItems.map(renderNavItem)}
@@ -114,4 +131,6 @@ export function SidebarNav() {
       </nav>
     </div>
   );
+
+  return isCollapsed ? <TooltipProvider>{navContainer}</TooltipProvider> : navContainer;
 }
