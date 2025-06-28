@@ -225,7 +225,7 @@ export default function DashboardPage() {
           </CardTitle>
           <div className="flex items-center gap-2 flex-shrink-0">
              {task.status === "Completed" && (
-                <Badge variant="outline">Completed</Badge>
+                <Badge variant="success">Completed</Badge>
             )}
             <Badge
               variant={
