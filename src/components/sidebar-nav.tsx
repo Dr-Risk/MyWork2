@@ -27,6 +27,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/t
  * This component builds the navigation menu displayed in the dashboard sidebar.
  * It dynamically renders navigation items based on the user's role and permissions,
  * ensuring users only see links to pages they are authorized to access.
+ * This is an implementation of the "Principle of Least Privilege" in the UI.
  * It also adapts its appearance based on the sidebar's collapsed state.
  */
 
@@ -113,12 +114,19 @@ export function SidebarNav({ isCollapsed = false }: { isCollapsed?: boolean }) {
     );
   }
 
-  // Filter the secondary navigation items based on the user's role.
+  /**
+   * [SECURITY] UI-level enforcement of the Principle of Least Privilege.
+   * By filtering the navigation items based on the user's role, we prevent
+   * non-privileged users from even seeing links to sections they shouldn't access.
+   * This is a crucial UX feature that complements server-side authorization.
+   */
   const privilegedNavItems = secondaryNavItems.filter(item => {
     if (item.href === '/dashboard/developer') {
+        // Only admins and super users can see the Developer link.
         return user?.role === 'admin' || user?.isSuperUser;
     }
     if (item.href === '/dashboard/settings') {
+        // Only admins can see the Settings link.
         return user?.role === 'admin';
     }
     return true; // Help is visible to everyone.

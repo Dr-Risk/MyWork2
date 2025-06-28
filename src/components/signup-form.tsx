@@ -48,11 +48,16 @@ import { createUser } from "@/lib/auth";
  *
  * NIST Special Publication 800-63B Guidelines on Passwords:
  * - Length is the most important factor. A minimum of 8 characters is a
- *   reasonable baseline.
+ *   reasonable baseline for memorized secrets.
  * - Complexity requirements (e.g., forcing symbols, numbers, uppercase) are
  *   no longer recommended as they often lead to predictable and less secure passwords.
+ *   (e.g., "Password123!")
  * - Checking passwords against a list of known-breached passwords is highly recommended
  *   in a production environment (not implemented in this mock).
+ * 
+ * OWASP A03 - Injection:
+ * Input validation, even on the client, is a best practice to ensure data
+ * integrity and provide a first line of defense against malformed data.
  */
 const formSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters." }),

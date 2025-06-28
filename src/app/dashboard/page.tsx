@@ -42,6 +42,7 @@ import { initialTasks } from "@/lib/tasks";
  * The view is dynamic based on the user's role:
  * - Admins and full-time employees see all tasks, grouped by assignee. They can also add and delete tasks.
  * - Contractors see only the tasks assigned to them and can mark them as complete.
+ * This demonstrates the Principle of Least Privilege on the UI layer.
  * 
  * The component handles fetching user and task data, reconciling it with local storage for persistence,
  * and managing the state for adding, completing, and deleting tasks.
@@ -159,8 +160,6 @@ export default function DashboardPage() {
   const groupedTasks = useMemo(() => {
     if (!isPrivilegedUser) return {};
     return tasks.reduce((acc, task) => {
-      // Find the assignee name from the users list, as the task object might not have it
-      // if it was just created.
       const assignee = users.find(u => u.username === task.assignee);
       const assigneeName = assignee?.name || "Unassigned";
 
@@ -297,6 +296,7 @@ export default function DashboardPage() {
             Dashboard
           </h1>
           <p className="text-muted-foreground">
+            {/* [SECURITY] UI demonstrates Least Privilege by showing different text based on role. */}
             {isPrivilegedUser 
                 ? "Manage all tasks for your team."
                 : "Here's a list of your assigned tasks."}

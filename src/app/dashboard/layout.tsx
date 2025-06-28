@@ -36,19 +36,22 @@ export default function DashboardLayout({
   // State to manage the collapsed/expanded state of the desktop sidebar.
   const [isCollapsed, setIsCollapsed] = useState(false);
 
+  /**
+   * [SECURITY] This is a client-side route protection check.
+   *
+   * OWASP A01 - Broken Access Control & A07 - Identification and Authentication Failures:
+   * This `useEffect` hook ensures that only authenticated users can access the dashboard area.
+   * If the `user` object is not present after the initial load, it redirects to the login page.
+   * 
+   * While client-side checks are good for user experience (e.g., quick redirects),
+   * they are not a substitute for robust server-side authorization. A malicious actor
+   * could potentially bypass this client-side code.
+   *
+   * In a production application, every page load and API request for protected
+   * resources must be verified on the server to ensure the user has a valid,
+   * unexpired session and the necessary permissions for the requested resource.
+   */
   useEffect(() => {
-    /**
-     * [SECURITY] This is a client-side route protection check.
-     *
-     * OWASP Recommendation (A01 - Broken Access Control):
-     * While client-side checks are good for user experience (e.g., quick redirects),
-     * they are not a substitute for server-side authorization. A malicious actor
-     * could bypass this client-side code.
-     *
-     * In a production application, every page load and API request for protected
-     * resources must be verified on the server to ensure the user has a valid
-     * session and the necessary permissions.
-     */
     if (!isLoading && !user) {
       router.replace("/");
     }
@@ -85,6 +88,7 @@ export default function DashboardLayout({
             </a>
           </div>
           <div className="flex-1 overflow-auto py-2">
+            {/* The SidebarNav component handles rendering links based on user role (Least Privilege) */}
             <SidebarNav isCollapsed={isCollapsed} />
           </div>
           {/* Footer of the sidebar containing the collapse/expand button. */}

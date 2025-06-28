@@ -38,14 +38,24 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     try {
       /**
-       * [SECURITY] This application uses localStorage to persist user sessions for
-       * demonstration purposes.
+       * [SECURITY] Session Management (OWASP A07 - Identification and Authentication Failures)
        *
-       * OWASP Recommendation (A07 - Identification and Authentication Failures):
-       * In a production environment, it is strongly recommended to store session tokens
-       * in secure, HttpOnly cookies. localStorage is vulnerable to Cross-Site Scripting (XSS)
-       * attacks, where a malicious script could access and steal the user's session data.
-       * HttpOnly cookies are not accessible to JavaScript, mitigating this risk.
+       * This application uses localStorage to persist user sessions for demonstration purposes.
+       * In a production environment, this is NOT RECOMMENDED.
+       *
+       * The Problem with localStorage:
+       * localStorage is accessible via JavaScript on the same domain. This makes it vulnerable
+       * to Cross-Site Scripting (XSS) attacks. If an attacker can inject a malicious script
+       * onto your site, they can read the contents of localStorage and steal the user's
+       * session token, allowing them to impersonate the user.
+       *
+       * The Recommended Solution: HttpOnly Cookies
+       * The best practice is to store session tokens in secure, HttpOnly cookies.
+       * - `HttpOnly`: This flag prevents the cookie from being accessed by client-side JavaScript,
+       *   mitigating the risk of XSS attacks stealing the token.
+       * - `Secure`: This flag ensures the cookie is only sent over HTTPS, preventing it from being
+       *   intercepted in transit.
+       * - `SameSite`: This attribute helps prevent Cross-Site Request Forgery (CSRF) attacks.
        */
       const storedUser = localStorage.getItem('currentUser');
       if (storedUser) {

@@ -38,8 +38,18 @@ import { useAuth } from "@/context/auth-context";
  * with the mock authentication backend (`/lib/auth.ts`) to verify credentials.
  */
 
-// This schema defines the validation rules for the login form fields
-// using Zod. It ensures that the data has a valid format before submission.
+/**
+ * [SECURITY] This schema defines the validation rules for the login form fields
+ * using Zod.
+ * 
+ * OWASP A03 - Injection:
+ * While client-side validation is primarily for user experience, it serves as a first
+ * line of defense against malformed data. Here, we enforce minimum lengths and a
+ * basic regex for the username. This helps prevent trivial injection attempts, but
+ * the primary defense is always server-side validation and using parameterized queries
+ * (for SQL Injection) or proper encoding (for XSS). React's JSX rendering inherently
+ * protects against most XSS by encoding string values before rendering them as HTML.
+ */
 const formSchema = z.object({
   username: z.string()
     .min(1, { message: "Please enter your username." })
@@ -75,7 +85,7 @@ export function LoginForm() {
     /**
      * [SECURITY] In a real application, this entire submission must be sent
      * over HTTPS to encrypt the credentials in transit, protecting against
-     * man-in-the-middle attacks.
+     * man-in-the-middle attacks (OWASP A02 - Cryptographic Failures).
      */
     const response = await checkCredentials(values.username, values.password);
     setIsLoading(false);
@@ -103,8 +113,11 @@ export function LoginForm() {
 
       case 'locked':
       case 'invalid':
-        // Show a generic failure message for locked or invalid credentials
-        // to prevent user enumeration attacks.
+        /**
+         * [SECURITY] User Enumeration Prevention (OWASP A07).
+         * Show a generic failure message for locked or invalid credentials
+         * to prevent an attacker from determining whether a username is valid or not.
+         */
         toast({
           variant: "destructive",
           title: "Login Failed",

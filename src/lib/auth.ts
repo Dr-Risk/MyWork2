@@ -10,17 +10,40 @@
  * a real backend service, allowing the frontend to be built as if it were
  * communicating with a live API.
  *
- * SECURITY NOTICE (OWASP & NIST Compliance):
+ * =============================================================================
+ * SECURITY NOTICE (OWASP Top 10 & NIST Compliance)
+ * =============================================================================
  * This is a MOCK system and is NOT secure for production use. It includes
  * comments below that highlight key security principles from OWASP and NIST
  * that would be implemented in a real-world application.
  *
  * Key security principles demonstrated or discussed:
- * - A01: Broken Access Control: Comments explain where server-side role checks are needed.
- * - A02: Cryptographic Failures: Comments highlight the need for strong password hashing (e.g., Argon2, bcrypt) instead of the mock hashing used here.
- * - A03: Injection: While not a direct database, principles of input validation are relevant. React helps prevent XSS on the frontend.
- * - A05: Security Misconfiguration: User enumeration is prevented by providing generic login failure messages.
- * - A07: Identification & Authentication Failures: The system includes concepts like password expiration and account lockout to mitigate brute-force attacks. Secure session management (via HttpOnly cookies) is recommended in comments in auth-context.tsx.
+ *
+ * - A01: Broken Access Control: Comments explain where server-side role checks
+ *   are needed to enforce privileges. The different user roles ('admin', 'full-time')
+ *   are a direct implementation of the Principle of Least Privilege.
+ *
+ * - A02: Cryptographic Failures: Comments highlight the need for strong password
+ *   hashing (e.g., Argon2, bcrypt) instead of the mock hashing used here. All
+ *   data in transit should be encrypted with TLS (HTTPS).
+ *
+ * - A03: Injection: While this mock doesn't use a database, comments explain
+ *   the need for parameterized queries or prepared statements to prevent SQL
+ *   Injection. For other interpreters, proper escaping and validation are key.
+ *
+ * - A05: Security Misconfiguration: User enumeration is prevented by providing
+ *   generic login failure messages. In a real app, ensure servers have security
+ *   headers, unnecessary features are disabled, etc.
+ *
+ * - A07: Identification & Authentication Failures: The system includes concepts
+ *   like password expiration and account lockout to mitigate brute-force attacks.
+ *   Session management is handled in auth-context.tsx, with comments on using
+ *   secure HttpOnly cookies.
+ * 
+ * - Path Traversal (related to A05 & A01): Not directly applicable here, but in
+ *   a real app, never trust user input to build file paths. Always use a allow-list
+ *   of safe paths and sanitize all input. The Next.js framework itself helps
+ *   prevent this by managing routes and not exposing the file system directly via URLs.
  */
 
 import { z } from "zod";
@@ -109,7 +132,9 @@ export const createUser = async (
   userData: CreateUserInput,
   role: 'full-time' | 'contractor' = 'full-time'
 ): Promise<{ success: boolean; message: string }> => {
-    // Prevent username collisions.
+    // [SECURITY] Input Validation (OWASP A03 - Injection):
+    // Zod validation on the server-side is critical to ensure data integrity
+    // before it enters the system, even if it's already validated on the client.
     if (users[userData.username]) {
         return { success: false, message: "Username already exists." };
     }
@@ -120,7 +145,7 @@ export const createUser = async (
     // Add the new user to the mock database.
     users[userData.username] = {
         username: userData.username,
-        // [SECURITY] Passwords must be securely hashed. See `verifyPassword` comments.
+        // [SECURITY] OWASP A02: See `verifyPassword` comments.
         passwordHash: `${userData.password}_hashed`,
         role: role, 
         name: userData.name,
@@ -138,11 +163,15 @@ export const createUser = async (
 
 /**
  * [SECURITY] Simulates password verification.
+ * 
+ * OWASP A02 - Cryptographic Failures:
  * In a real application, NEVER store passwords in plain text or use a reversible format.
- * Use a strong, salted, one-way hashing algorithm like Argon2 or bcrypt.
- * The library would provide a `verify` function that compares the user's input
+ * Use a strong, salted, one-way hashing algorithm like Argon2 (recommended), scrypt, or
+ * bcrypt. The library would provide a `verify` function that compares the user's input
  * against the stored hash in a way that's safe from timing attacks.
- * NIST Special Publication 800-63B provides detailed guidance on this.
+ * 
+ * NIST Special Publication 800-63B provides detailed guidance on password management.
+ * 
  * @param password The plain text password from the user.
  * @param hash The stored "hash" from the mock database.
  * @returns A promise resolving to true if the passwords match.
@@ -181,14 +210,14 @@ export const checkCredentials = async (username: string, pass: string): Promise<
 
   const user = users[username];
 
-  // [SECURITY] User Enumeration Prevention (OWASP A05):
+  // [SECURITY] User Enumeration Prevention (OWASP A07 / A05):
   // If the user doesn't exist, return a generic error message. Do not reveal
   // that the username was the incorrect part of the credential pair.
   if (!user) {
     return { status: 'invalid', message: 'Invalid username or password.' };
   }
 
-  // [SECURITY] Account Lockout: Check if the account is already locked.
+  // [SECURITY] Account Lockout (OWASP A07): Check if the account is already locked.
   if (user.isLocked && user.role !== 'admin') {
     return { status: 'locked', message: 'Your account is locked due to too many failed login attempts.' };
   }
@@ -209,7 +238,7 @@ export const checkCredentials = async (username: string, pass: string): Promise<
     return { status: 'invalid', message: 'Invalid username or password.' };
   }
   
-  // [SECURITY] Password Expiration: Check if the password is older than 90 days.
+  // [SECURITY] Password Expiration (OWASP A07): Check if the password is older than 90 days.
   const ninetyDaysAgo = new Date();
   ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
   if (new Date(user.passwordLastChanged) < ninetyDaysAgo) {
@@ -242,10 +271,12 @@ export const getUsers = async (): Promise<SanitizedUser[]> => {
 
 /**
  * [SECURITY] Updates a user's role.
+ *
+ * OWASP A01 - Broken Access Control & Principle of Least Privilege:
  * In a real application, this function must be a protected server-side endpoint.
  * It should first verify that the currently authenticated user (e.g., from a session token)
- * has administrative privileges before proceeding. This is an example of
- * implementing Broken Access Control (OWASP A01).
+ * has administrative privileges before proceeding. This function simulates that check
+ * by ensuring the target user is not an admin.
  */
 export const updateUserRole = async (
   username: string,
@@ -271,8 +302,11 @@ export const updateUserRole = async (
 
 /**
  * [SECURITY] Updates a user's profile information.
+ *
+ * OWASP A01 - Broken Access Control:
  * This should also be a protected server-side endpoint. The logic should verify
- * that the user is either updating their own profile or is an administrator.
+ * that the user is either updating their own profile or is an administrator. This
+ * mock implementation doesn't include that check but a real one must.
  */
 export const updateUserProfile = async (
   username: string,
@@ -292,6 +326,8 @@ export const updateUserProfile = async (
 
 /**
  * [SECURITY] Updates a user's password.
+ * 
+ * OWASP A01 & A07:
  * This is a critical security function that must be protected on the server.
  * It must verify the user's current password before allowing a change to prevent
  * account takeover if a user's session is hijacked.
@@ -317,7 +353,10 @@ export const updateUserPassword = async (
 
 /**
  * [SECURITY] Updates a user's super user status.
+ *
+ * OWASP A01 - Broken Access Control:
  * This is a privileged action that must be restricted to admins on the server side.
+ * A user should never be able to elevate their own privileges.
  */
 export const updateUserSuperUserStatus = async (
   username: string,
@@ -336,6 +375,8 @@ export const updateUserSuperUserStatus = async (
 
 /**
  * [SECURITY] Manually locks a user's account.
+ *
+ * OWASP A01 - Broken Access Control:
  * This is a privileged action that must be restricted to admins on the server side.
  */
 export const lockUserAccount = async (
@@ -352,6 +393,8 @@ export const lockUserAccount = async (
 
 /**
  * [SECURITY] Manually unlocks a user's account.
+ *
+ * OWASP A01 - Broken Access Control:
  * This is a privileged action that must be restricted to admins on the server side.
  */
 export const unlockUserAccount = async (
@@ -369,6 +412,8 @@ export const unlockUserAccount = async (
 
 /**
  * [SECURITY] Removes a user from the system.
+ *
+ * OWASP A01 - Broken Access Control:
  * This is a highly destructive and privileged action that must be restricted
  * to admins on the server side. Proper checks are required.
  */

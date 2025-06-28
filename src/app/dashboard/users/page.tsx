@@ -18,7 +18,8 @@ import { initialTasks } from "@/lib/tasks";
  * 1. For `contractor` users, it acts as their primary task dashboard, showing only the tasks assigned to them.
  * 2. For `full-time` and `admin` users, it's a "Connect with Friends" page, which is currently a placeholder.
  * 
- * This component demonstrates how a single route can render different content based on user permissions.
+ * This component demonstrates how a single route can render different content based on user permissions,
+ * an example of applying the Principle of Least Privilege in the UI.
  * It also contains its own logic for fetching and persisting task data, specific to the contractor's view.
  */
 export default function UsersPage() {

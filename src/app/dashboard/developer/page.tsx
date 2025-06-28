@@ -22,11 +22,17 @@ export default function DeveloperPage() {
 
   /**
    * [SECURITY] Client-Side Route Protection.
-   * This `useEffect` hook checks if the current user has the required permissions.
-   * If not, it redirects them to the main dashboard. While this provides a good
-   * user experience by preventing access to the UI, it's NOT a substitute for
-   * server-side authorization. A malicious user could bypass this client-side
-   * check. All sensitive data and actions must be protected on the server.
+   * 
+   * OWASP A01: Broken Access Control & Principle of Least Privilege:
+   * This `useEffect` hook checks if the current user has the required permissions ('admin' or 'isSuperUser').
+   * If not, it redirects them to the main dashboard. This is a client-side implementation
+   * of access control that provides a good user experience by preventing unauthorized users
+   * from seeing the UI.
+   *
+   * IMPORTANT: This is NOT a substitute for server-side authorization. A malicious user
+   * could bypass this client-side check. All sensitive data and actions (like those in
+   * the DatabaseViewer component) must be protected by server-side checks to ensure
+   * the authenticated user has the necessary permissions.
    */
   useEffect(() => {
     if (!isLoading && !(user?.role === 'admin' || user?.isSuperUser)) {
@@ -60,7 +66,10 @@ export default function DeveloperPage() {
             </div>
         </CardHeader>
       </Card>
-      {/* The DatabaseViewer component shows the list of users and allows management. */}
+      {/* 
+        The DatabaseViewer component makes its own API calls. These API endpoints
+        must be secured on the server to verify the user has 'admin' privileges.
+      */}
       <DatabaseViewer />
     </div>
   );
