@@ -71,30 +71,31 @@ export default function DashboardPage() {
         setUsers(userList);
         const existingUsernames = new Set(userList.map(u => u.username));
 
-        // Attempt to load tasks from the browser's local storage.
-        const storedTasksJSON = localStorage.getItem('appTasks');
-        const storedTasks = storedTasksJSON ? (JSON.parse(storedTasksJSON) as Task[]) : [];
-        
         // Use a Map to intelligently merge default tasks with stored tasks.
-        // This ensures new default tasks are added and existing ones can be updated
-        // without losing user-created tasks.
+        // This ensures user changes (like completing a task) are preserved,
+        // while also making sure the app's default tasks are always present.
         const tasksMap = new Map<number, Task>();
-        
-        // 1. Add tasks from local storage first.
-        for (const task of storedTasks) {
-          tasksMap.set(task.id, task);
-        }
-        
-        // 2. Add/overwrite with the initial tasks from the codebase.
-        // This ensures the default tasks are always up-to-date.
+
+        // 1. Add the initial tasks from the codebase first. This establishes the base set.
         for (const initialTask of initialTasks) {
           tasksMap.set(initialTask.id, initialTask);
         }
 
+        // 2. Attempt to load tasks from local storage.
+        const storedTasksJSON = localStorage.getItem('appTasks');
+        if (storedTasksJSON) {
+          const storedTasks = JSON.parse(storedTasksJSON) as Task[];
+          // 3. Overwrite the initial tasks with any stored versions.
+          // This preserves changes like a task being marked "Completed".
+          for (const storedTask of storedTasks) {
+            tasksMap.set(storedTask.id, storedTask);
+          }
+        }
+        
         // Convert the map back to an array.
         let reconciledTasks = Array.from(tasksMap.values());
         
-        // Final cleanup: Filter out any tasks that are unassigned or assigned to non-existent users.
+        // Final cleanup: Filter out any tasks that are assigned to non-existent users.
         // This prevents data from deleted users from appearing on the dashboard.
         const finalTasks = reconciledTasks.filter(task => {
           return task.assignee && existingUsernames.has(task.assignee);
@@ -158,16 +159,18 @@ export default function DashboardPage() {
   const groupedTasks = useMemo(() => {
     if (!isPrivilegedUser) return {};
     return tasks.reduce((acc, task) => {
-      if (task.assigneeName) {
-        const assigneeName = task.assigneeName;
-        if (!acc[assigneeName]) {
-          acc[assigneeName] = [];
-        }
-        acc[assigneeName].push(task);
+      // Find the assignee name from the users list, as the task object might not have it
+      // if it was just created.
+      const assignee = users.find(u => u.username === task.assignee);
+      const assigneeName = assignee?.name || "Unassigned";
+
+      if (!acc[assigneeName]) {
+        acc[assigneeName] = [];
       }
+      acc[assigneeName].push(task);
       return acc;
     }, {} as Record<string, Task[]>);
-  }, [tasks, isPrivilegedUser]);
+  }, [tasks, users, isPrivilegedUser]);
 
   // `useMemo` to filter and get only the tasks assigned to the current non-privileged user.
   const myTasks = useMemo(() => {
@@ -275,9 +278,10 @@ export default function DashboardPage() {
             variant={task.status === "Completed" ? "outline" : "default"}
             className="w-full"
             onClick={() => task.status !== 'Completed' && handleCompleteTask(task.id)}
+            disabled={task.status === 'Completed'}
           >
             {task.status === "Completed"
-              ? "View Details"
+              ? "Completed"
               : "Mark as Complete"}
           </Button>
       )}

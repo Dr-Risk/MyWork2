@@ -34,21 +34,22 @@ export default function UsersPage() {
      */
     useEffect(() => {
         try {
-          // Load tasks from local storage.
-          const storedTasksJSON = localStorage.getItem('appTasks');
-          const storedTasks = storedTasksJSON ? (JSON.parse(storedTasksJSON) as Task[]) : [];
-          
-          // Use a Map to merge stored tasks with the default tasks from the codebase.
+          // Use a Map to intelligently merge default tasks with stored tasks.
+          // This ensures user changes (like completing a task) are preserved.
           const tasksMap = new Map<number, Task>();
           
-          // Add stored tasks first.
-          for (const task of storedTasks) {
-            tasksMap.set(task.id, task);
-          }
-          
-          // Then, add/overwrite with initial tasks to ensure the default data is always fresh.
+          // 1. Add the initial tasks from the codebase first.
           for (const initialTask of initialTasks) {
             tasksMap.set(initialTask.id, initialTask);
+          }
+
+          // 2. Load tasks from local storage and overwrite the defaults.
+          const storedTasksJSON = localStorage.getItem('appTasks');
+          if (storedTasksJSON) {
+            const storedTasks = (JSON.parse(storedTasksJSON) as Task[]);
+            for (const storedTask of storedTasks) {
+              tasksMap.set(storedTask.id, storedTask);
+            }
           }
     
           // The final task list is the values from the map.
@@ -140,9 +141,10 @@ export default function UsersPage() {
                                     variant={task.status === "Completed" ? "outline" : "default"}
                                     className="w-full"
                                     onClick={() => task.status !== 'Completed' && handleCompleteTask(task.id)}
+                                    disabled={task.status === 'Completed'}
                                 >
                                     {task.status === "Completed"
-                                        ? "View Details"
+                                        ? "Completed"
                                         : "Mark as Complete"}
                                 </Button>
                             </CardFooter>
