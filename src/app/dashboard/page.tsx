@@ -33,6 +33,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import type { Task } from "@/lib/tasks";
 import { initialTasks } from "@/lib/tasks";
+import { cn } from "@/lib/utils";
 
 /**
  * @fileoverview Main Dashboard Page
@@ -216,23 +217,28 @@ export default function DashboardPage() {
 
   // A reusable component for rendering a single task card.
   const TaskCard = ({ task }: { task: Task }) => (
-    <Card key={task.id} className="flex flex-col">
+    <Card key={task.id} className={cn("flex flex-col", task.status === 'Completed' && "opacity-70")}>
       <CardHeader>
-        <div className="flex justify-between items-start">
+        <div className="flex justify-between items-start gap-2">
           <CardTitle className="text-lg font-headline">
             {task.title}
           </CardTitle>
-          <Badge
-            variant={
-              task.priority === "High"
-                ? "destructive"
-                : task.priority === "Medium"
-                ? "secondary"
-                : "outline"
-            }
-          >
-            {task.priority}
-          </Badge>
+          <div className="flex items-center gap-2 flex-shrink-0">
+             {task.status === "Completed" && (
+                <Badge variant="outline">Completed</Badge>
+            )}
+            <Badge
+              variant={
+                task.priority === "High"
+                  ? "destructive"
+                  : task.priority === "Medium"
+                  ? "secondary"
+                  : "outline"
+              }
+            >
+              {task.priority}
+            </Badge>
+          </div>
         </div>
         <CardDescription>{task.dueDate}</CardDescription>
       </CardHeader>
