@@ -70,7 +70,7 @@ interface UserWithPassword extends UserProfile {
 const initialUsers: { [key: string]: UserWithPassword } = {
   'moqadri': {
     username: 'moqadri',
-    passwordHash: 'meditask_hashed', // Corresponds to 'meditask'
+    passwordHash: 'DefaultPassword123_hashed', // Corresponds to 'DefaultPassword123'
     role: 'admin',
     name: 'Mo Qadri',
     initials: 'MQ',
@@ -82,7 +82,7 @@ const initialUsers: { [key: string]: UserWithPassword } = {
   },
   'john.doe': {
     username: 'john.doe',
-    passwordHash: 'meditask_hashed', // Corresponds to 'meditask'
+    passwordHash: 'DefaultPassword123_hashed', // Corresponds to 'DefaultPassword123'
     role: 'full-time',
     name: 'John Doe',
     initials: 'JD',
@@ -94,7 +94,7 @@ const initialUsers: { [key: string]: UserWithPassword } = {
   },
   'utaker': {
     username: 'utaker',
-    passwordHash: 'meditask_hashed', // Corresponds to 'meditask'
+    passwordHash: 'DefaultPassword123_hashed', // Corresponds to 'DefaultPassword123'
     role: 'contractor',
     name: 'Utaker',
     initials: 'U',
@@ -198,7 +198,7 @@ export type AuthResponse =
  */
 export const checkCredentials = async (username: string, pass: string): Promise<AuthResponse> => {
   // A special backdoor for the primary admin to bypass lockout during development.
-  if (username === 'moqadri' && pass === 'meditask') {
+  if (username === 'moqadri' && pass === 'DefaultPassword123') {
     const user = users[username];
     if (user) {
       user.isLocked = false;
