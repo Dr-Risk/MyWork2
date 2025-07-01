@@ -190,6 +190,12 @@ export type AuthResponse =
     | { status: 'locked'; message: string }
     | { status: 'expired'; message: string };
 
+// [SECURITY] Zod schema for server-side validation of login credentials.
+const LoginCredentialsSchema = z.object({
+  username: z.string().min(1, { message: "Username cannot be empty." }),
+  password: z.string().min(1, { message: "Password cannot be empty." }),
+});
+
 /**
  * Checks a user's login credentials against the mock database.
  * @param username The user's username.
@@ -197,6 +203,15 @@ export type AuthResponse =
  * @returns A promise resolving to an AuthResponse object.
  */
 export const checkCredentials = async (username: string, pass: string): Promise<AuthResponse> => {
+  // [SECURITY] Server-Side Input Validation (OWASP A03 - Injection).
+  // This is the most critical validation step. It ensures that data conforms to the
+  // expected format before any further processing, preventing a wide range of attacks.
+  const validation = LoginCredentialsSchema.safeParse({ username, password: pass });
+  if (!validation.success) {
+    // Return a generic error to prevent user enumeration.
+    return { status: 'invalid', message: 'Invalid username or password.' };
+  }
+
   // A special backdoor for the primary admin to bypass lockout during development.
   if (username === 'moqadri' && pass === 'DefaultPassword123') {
     const user = users[username];
