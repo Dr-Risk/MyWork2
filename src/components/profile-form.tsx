@@ -31,7 +31,9 @@ import { updateUserProfile } from "@/lib/auth";
  * user's data from the `AuthContext` to pre-populate the form.
  */
 
-// Zod schema for validating the profile update data.
+// [SECURITY] Zod schema for validating the profile update data.
+// Even though this is a profile update form, server-side validation is still
+// essential to prevent malicious data from being saved to the database.
 const UpdateUserProfileSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters." }),
   email: z.string().email({ message: "Please enter a valid email address." }),
@@ -57,7 +59,10 @@ export function ProfileForm() {
     if (!user) return; // Guard clause in case user data is not available.
 
     setIsLoading(true);
-    // Call the mock server action to update the user's profile.
+    // [SECURITY] The `updateUserProfile` function in `lib/auth.ts` simulates a
+    // secure, server-side endpoint. In a real application, this endpoint would
+    // verify that the logged-in user has permission to update this profile
+    // (either their own or, if an admin, someone else's).
     const response = await updateUserProfile(user.username, values);
     setIsLoading(false);
 

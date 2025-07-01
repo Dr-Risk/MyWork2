@@ -94,7 +94,14 @@ export function UserNav() {
       <DropdownMenuContent className="w-56" align="end" forceMount>
         <DropdownMenuLabel className="font-normal">
           <div className="flex flex-col space-y-1">
-            <p className="text-sm font-medium leading-none">{user.name}</p>
+            <p className="text-sm font-medium leading-none">
+              {/*
+                * [SECURITY] Cross-Site Scripting (XSS) Prevention
+                * React's JSX automatically escapes user-provided data like `user.name`
+                * and `user.email`, preventing malicious scripts from being rendered.
+                */}
+              {user.name}
+            </p>
             <p className="text-xs leading-none text-muted-foreground">
               {user.email}
             </p>
@@ -108,7 +115,13 @@ export function UserNav() {
               <span>Profile</span>
             </Link>
           </DropdownMenuItem>
-          {/* The Settings link is only shown to users with the 'admin' role. */}
+          {/*
+            * [SECURITY] Principle of Least Privilege (OWASP A01 - Broken Access Control)
+            * The Settings link is only rendered in the UI if the user's role is 'admin'.
+            * This prevents non-admins from even seeing the link. This is a UI-level control
+            * that MUST be backed by a corresponding authorization check on the
+            * `/dashboard/settings` page itself.
+            */}
           {user.role === "admin" && (
             <DropdownMenuItem asChild>
               <Link href="/dashboard/settings">

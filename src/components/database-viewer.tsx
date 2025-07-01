@@ -96,6 +96,8 @@ export function DatabaseViewer() {
     username: string,
     newRole: 'full-time' | 'contractor'
   ) => {
+    // [SECURITY] This action is protected on the backend (see src/lib/auth.ts)
+    // to ensure only authorized users can change roles.
     const response = await updateUserRole(username, newRole);
 
     if (response.success) {
@@ -220,7 +222,14 @@ export function DatabaseViewer() {
                 {/* Map over the users and render a row for each one. */}
                 {users.map((user) => (
                   <TableRow key={user.username}>
-                    <TableCell className="font-medium">{user.username}</TableCell>
+                    <TableCell className="font-medium">
+                      {/*
+                        * [SECURITY] Cross-Site Scripting (XSS) Prevention
+                        * React automatically escapes the `user.username` string, preventing
+                        * any malicious scripts it might contain from being executed.
+                        */}
+                      {user.username}
+                    </TableCell>
                     <TableCell>{user.email}</TableCell>
                     <TableCell>
                       <Badge variant="secondary">{user.role}</Badge>

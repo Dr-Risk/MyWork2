@@ -38,6 +38,9 @@ import type { Task } from "@/lib/tasks";
  */
 
 // Zod schema defines the structure and validation rules for the form fields.
+// This client-side validation provides immediate feedback to the user and is a
+// first line of defense. However, the same (or stricter) validation MUST be
+// enforced on the server.
 const formSchema = z.object({
   title: z.string().min(3, { message: "Title must be at least 3 characters." }),
   description: z.string().min(10, { message: "Description must be at least 10 characters." }),
@@ -92,6 +95,8 @@ export function AddTaskForm({ users, onSuccess }: AddTaskFormProps) {
     };
     
     // Simulate a network delay to mimic an API call.
+    // In a real application, the `newTask` object would be sent to a secure backend endpoint.
+    // The backend would perform its own validation before saving to the database.
     setTimeout(() => {
         onSuccess(newTask); // Call the success callback with the new task.
         toast({

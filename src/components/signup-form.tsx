@@ -55,9 +55,11 @@ import { createUser } from "@/lib/auth";
  * - Checking passwords against a list of known-breached passwords is highly recommended
  *   in a production environment (not implemented in this mock).
  * 
- * OWASP A03 - Injection:
- * Input validation, even on the client, is a best practice to ensure data
- * integrity and provide a first line of defense against malformed data.
+ * Input Validation (OWASP A03 - Injection):
+ * - Input validation, even on the client, is a best practice to ensure data
+ *   integrity and provide a first line of defense against malformed data.
+ * - The server-side `createUser` function in `lib/auth.ts` performs its own validation,
+ *   which is the most critical security control.
  */
 const formSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters." }),

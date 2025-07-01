@@ -221,6 +221,18 @@ export default function DashboardPage() {
       <CardHeader>
         <div className="flex justify-between items-start gap-2">
           <CardTitle className="text-lg font-headline">
+            {/*
+              * [SECURITY] Cross-Site Scripting (XSS) Prevention (OWASP A03)
+              *
+              * React's JSX automatically escapes string content rendered within tags.
+              * This means that if `task.title` contained malicious code like `<script>alert('XSS')</script>`,
+              * React would render it as plain text, not executable HTML. This is a fundamental
+              * security feature of React that prevents most common XSS attacks.
+              *
+              * The only time you are vulnerable is if you use the `dangerouslySetInnerHTML` prop,
+              * which is intentionally named to warn developers of the risk. This application
+              * avoids using `dangerouslySetInnerHTML`.
+              */}
             {task.title}
           </CardTitle>
           <div className="flex items-center gap-2 flex-shrink-0">
@@ -244,6 +256,7 @@ export default function DashboardPage() {
       </CardHeader>
       <CardContent className="flex-grow space-y-3">
         <p className="text-sm text-muted-foreground">
+          {/* [SECURITY] XSS Prevention: Same as the title, React escapes this content. */}
           {task.description}
         </p>
           {/* Show the assignee only for privileged users. */}

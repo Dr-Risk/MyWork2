@@ -42,16 +42,18 @@ import { useAuth } from "@/context/auth-context";
  * [SECURITY] This schema defines the validation rules for the login form fields
  * using Zod.
  * 
- * OWASP A03 - Injection:
- * The regex below enforces a strict "allow-list" of characters for the username,
- * preventing common injection characters. This is a first line of defense, but the
- * primary defense is always the equivalent validation on the server-side.
+ * Input Validation (OWASP A03 - Injection):
+ * - The regex below enforces a strict "allow-list" of characters for the username,
+ *   preventing common injection characters like `'` or control characters. This is a
+ *   first line of defense on the client-side. The primary defense is always the
+ *   equivalent validation on the server-side, which is implemented in `src/lib/auth.ts`.
  *
  * NIST SP 800-63B on Passwords:
- * The password validation focuses on a minimum length of 8 characters. It does NOT
- * enforce character complexity (e.g., symbols, numbers) as this is no longer
- * recommended. Allowing a wide range of characters, including symbols and spaces,
- * encourages stronger, more memorable passphrases.
+ * - The password validation focuses on a minimum length of 8 characters. It does NOT
+ *   enforce character complexity (e.g., symbols, numbers) as this is no longer
+ *   recommended. Allowing a wide range of characters, including symbols and spaces,
+ *   encourages stronger, more memorable passphrases. The key security control is
+ *   strong hashing on the server, not complex rules on the client.
  */
 const formSchema = z.object({
   username: z.string()
@@ -149,6 +151,12 @@ export function LoginForm() {
                   <FormControl>
                     <Input placeholder="Enter your username" {...field} type="text" />
                   </FormControl>
+                  {/*
+                    * [SECURITY] Cross-Site Scripting (XSS) Prevention
+                    * The error messages displayed by <FormMessage /> are derived from the
+                    * `formSchema`. They are static strings and do not contain user input,
+                    * making them safe from XSS. React would still escape them if they did.
+                    */}
                   <FormMessage />
                 </FormItem>
               )}

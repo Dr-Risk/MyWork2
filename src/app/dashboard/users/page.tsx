@@ -116,6 +116,10 @@ export default function UsersPage() {
                             <CardHeader>
                                 <div className="flex justify-between items-start">
                                     <CardTitle className="text-lg font-headline">
+                                        {/*
+                                        * [SECURITY] Cross-Site Scripting (XSS) Prevention
+                                        * React automatically escapes this content, preventing script injection.
+                                        */}
                                         {task.title}
                                     </CardTitle>
                                     <Badge
@@ -134,6 +138,7 @@ export default function UsersPage() {
                             </CardHeader>
                             <CardContent className="flex-grow">
                                 <p className="text-sm text-muted-foreground">
+                                    {/* [SECURITY] XSS Prevention: React escapes this as well. */}
                                     {task.description}
                                 </p>
                             </CardContent>

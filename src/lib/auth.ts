@@ -34,6 +34,10 @@
  * - A05: Security Misconfiguration: User enumeration is prevented by providing
  *   generic login failure messages. In a real app, ensure servers have security
  *   headers, unnecessary features are disabled, etc.
+ * 
+ * - Cross-Site Scripting (XSS) is also related to A03. In this backend file,
+ *   the primary defense is ensuring that data sent to the frontend is clean.
+ *   The frontend (using React) then has the responsibility of escaping it on render.
  *
  * - A07: Identification & Authentication Failures: The system includes concepts
  *   like password expiration and account lockout to mitigate brute-force attacks.
@@ -216,7 +220,7 @@ export const checkCredentials = async (username: string, pass: string): Promise<
 
   /*
    * ====================================================================
-   * [SECURITY] SQL INJECTION (OWASP A03) PREVENTION
+   * [SECURITY] SQL INJECTION (OWASP A03) PREVENTION & TESTING
    * ====================================================================
    * This mock application does NOT use a SQL database, so it is not directly
    * vulnerable to SQL injection from the provided inputs.
@@ -228,9 +232,6 @@ export const checkCredentials = async (username: string, pass: string): Promise<
    * Queries (also known as Prepared Statements). This separates the query
    * logic from the data, ensuring that user input cannot be executed as code.
    *
-   * DO NOT try to sanitize input by blacklisting characters (e.g., removing quotes).
-   * Attackers can often find ways to bypass these filters (e.g., with encoding).
-   *
    * Example (using a hypothetical database library):
    *
    * // WRONG - Vulnerable to Injection
@@ -241,8 +242,16 @@ export const checkCredentials = async (username: string, pass: string): Promise<
    * const query = "SELECT * FROM users WHERE username = ?";
    * db.query(query, [username]);
    *
-   * In the correct example, the database driver safely handles the `username`
-   * variable, treating it purely as data, not as executable SQL.
+   * How to Test for SQL Injection:
+   * 1. Manual Testing: Enter SQL-like syntax into input fields.
+   *    - Classic Test: ' OR 1=1 --
+   *    - Union-based Test: ' UNION SELECT null, username, password FROM users --
+   *    If the application behaves unexpectedly (logs you in, shows an error page with
+   *    database details, or displays extra data), it is likely vulnerable. A secure
+   *    application will either reject the input due to validation (like this app does)
+   *    or treat it as a literal string with no special meaning.
+   * 2. Automated Scanning: Use Dynamic Application Security Testing (DAST) tools like
+   *    OWASP ZAP or Burp Suite to automatically scan for injection vulnerabilities.
    * ====================================================================
    */
 
