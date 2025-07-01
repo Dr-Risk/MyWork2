@@ -111,10 +111,11 @@ const initialUsers: { [key: string]: UserWithPassword } = {
 };
 
 // This ensures the mock database persists across hot reloads in development environments.
-if (!(global as any).users) {
-  (global as any).users = initialUsers;
+// We use a versioned variable name to ensure data is refreshed after code changes.
+if (!(global as any).users_v2) {
+  (global as any).users_v2 = initialUsers;
 }
-const users: { [key: string]: UserWithPassword } = (global as any).users;
+const users: { [key: string]: UserWithPassword } = (global as any).users_v2;
 
 
 // Zod schema for validating new user creation data on the "server".
@@ -265,7 +266,7 @@ export const checkCredentials = async (username: string, pass: string): Promise<
   }
 
   // [SECURITY] Account Lockout (OWASP A07): Check if the account is already locked.
-  if (user.isLocked && user.role !== 'admin') {
+  if (user.isLocked) {
     return { status: 'locked', message: 'Your account is locked due to too many failed login attempts.' };
   }
 
