@@ -191,9 +191,10 @@ export type AuthResponse =
     | { status: 'expired'; message: string };
 
 // [SECURITY] Zod schema for server-side validation of login credentials.
+// This is the most critical validation step to protect the backend.
 const LoginCredentialsSchema = z.object({
   username: z.string().regex(/^[a-zA-Z0-9_.-]+$/),
-  password: z.string().min(1),
+  password: z.string().min(8),
 });
 
 /**
@@ -217,9 +218,8 @@ export const checkCredentials = async (username: string, pass: string): Promise<
    * ====================================================================
    * [SECURITY] SQL INJECTION (OWASP A03) PREVENTION
    * ====================================================================
-   * You correctly identified that inputs like "if else 1==1" are common
-   * in SQL injection attacks. This mock application does NOT use a SQL
-   * database, so it is not directly vulnerable to SQL injection.
+   * This mock application does NOT use a SQL database, so it is not directly
+   * vulnerable to SQL injection from the provided inputs.
    *
    * HOWEVER, IN A REAL APPLICATION, THIS IS A CRITICAL THREAT.
    *

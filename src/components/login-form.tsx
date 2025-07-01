@@ -43,11 +43,15 @@ import { useAuth } from "@/context/auth-context";
  * using Zod.
  * 
  * OWASP A03 - Injection:
- * While client-side validation is primarily for user experience, it serves as a first
- * line of defense against malformed data. The regex below enforces a strict "allow-list"
- * of characters for the username, preventing common injection characters like spaces,
- * quotes, and equals signs. This helps prevent trivial injection attempts, but the
+ * The regex below enforces a strict "allow-list" of characters for the username,
+ * preventing common injection characters. This is a first line of defense, but the
  * primary defense is always the equivalent validation on the server-side.
+ *
+ * NIST SP 800-63B on Passwords:
+ * The password validation focuses on a minimum length of 8 characters. It does NOT
+ * enforce character complexity (e.g., symbols, numbers) as this is no longer
+ * recommended. Allowing a wide range of characters, including symbols and spaces,
+ * encourages stronger, more memorable passphrases.
  */
 const formSchema = z.object({
   username: z.string()
