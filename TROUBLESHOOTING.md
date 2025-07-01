@@ -52,3 +52,45 @@ To identify and resolve this issue, and to prevent similar bugs in the future, a
 -   **User Testing**: The repeated feedback loop during this debugging process served as a form of manual UAT. By reporting that the issue persisted, the end-user helped confirm that the fixes were not yet complete, forcing a deeper investigation. This highlights the invaluable role of manual testing and user feedback in the development cycle.
 
 This structured approach ensures that all layers of the application are validated, from individual functions to complete user workflows, significantly improving reliability and security.
+
+## Issue: Task Status Inconsistency Across Roles (Solved)
+
+### Description
+
+When a `contractor` user marked a task as "Completed," the status change was correctly saved but was not visible on the `admin` or `full-time` user dashboards. This created a data discrepancy where managers could not see the actual progress of their team's tasks.
+
+### Root Cause Analysis & Fixes
+
+The issue was purely a UI rendering problem on the main dashboard page (`src/app/dashboard/page.tsx`). The underlying data in `localStorage` was being updated correctly, but the `TaskCard` component used by admin and full-time users did not have the logic to visually represent the "Completed" status.
+
+**Solution**: The `TaskCard` component was updated to:
+1.  Display a green "Completed" badge when `task.status === 'Completed'`. A new "success" variant was added to the `Badge` component to support this.
+2.  Apply a dimming effect (`opacity-70`) to the entire card for completed tasks, making them visually distinct from active tasks.
+
+### Testing Strategy
+
+-   **Manual UAT**: Logged in as a `contractor`, completed a task, logged out. Logged in as an `admin` and verified that the same task now appeared on the dashboard with the green "Completed" badge and dimmed styling.
+
+## Issue: Multiple Security Vulnerabilities Identified and Remediated (Solved)
+
+### Description
+
+A series of security audits identified several vulnerabilities related to authentication, input validation, and access control. These included weak default passwords, insufficient server-side validation, and a developer backdoor.
+
+### Root Cause Analysis & Fixes
+
+A comprehensive security hardening pass was performed, resulting in the following fixes:
+
+1.  **Weak Default Passwords**: The initial default password ('meditask') was a simple dictionary word. This was updated to `DefaultPassword123` across the mock database to better align with NIST password guidelines (favoring length over arbitrary complexity rules).
+2.  **Missing Server-Side Validation**: The `checkCredentials` function in `src/lib/auth.ts` lacked validation for input format, trusting the client-side checks. This was a critical flaw, as client-side validation can be bypassed. Strict Zod schemas were added on the server to mirror and enforce client-side rules for usernames and passwords.
+3.  **SQL Injection Vector**: The server-side username validation was initially too permissive, allowing characters commonly used in SQL injection (SQLi) attacks. The validation was hardened using a strict "allow-list" regular expression (`/^[a-zA-Z0-9_.-]+$/`). This ensures that only safe characters can be processed by the backend.
+4.  **Admin Backdoor**: A special case in the authentication logic in `src/lib/auth.ts` allowed the `moqadri` admin user to bypass the account lockout mechanism. This backdoor was removed entirely, ensuring all accounts (including admins) are subject to the same security controls for failed login attempts.
+5.  **Lack of In-Code Security Documentation**: There was a lack of comments explaining the security measures in place. This was remediated by adding extensive, detailed comments in all relevant files (`login-form.tsx`, `auth.ts`, `dashboard/page.tsx`, etc.) explaining how **Input Validation**, **Cross-Site Scripting (XSS) Prevention**, and **SQL Injection Prevention** (with examples of using parameterized queries) are handled.
+
+### Testing Strategy
+
+-   **Manual Penetration Testing**:
+    -   Attempted to log in with the old password to confirm it was no longer valid.
+    -   Entered SQLi-like strings (e.g., `' OR 1=1 --`) and other invalid characters into the username field to verify that the new, stricter validation rejects them on both the client and server.
+    -   Intentionally failed login attempts for the admin user to confirm that the account lockout mechanism now applies correctly.
+-   **Code Review**: Performed a full review of the codebase to ensure security comments were added, were accurate, and provided clear guidance for future development, particularly regarding the transition to a production environment with a real database.
