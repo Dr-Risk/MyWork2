@@ -110,12 +110,13 @@ const initialUsers: { [key: string]: UserWithPassword } = {
   }
 };
 
-// This ensures the mock database persists across hot reloads in development environments.
-// We use a versioned variable name to ensure data is refreshed after code changes.
-if (!(global as any).users_v2) {
-  (global as any).users_v2 = initialUsers;
-}
-const users: { [key: string]: UserWithPassword } = (global as any).users_v2;
+// In-memory "database" of users. We create a deep copy of the initial users
+// to allow for in-memory modifications (like locking an account) during the
+// application's lifecycle.
+// NOTE: Because this is a mock database, any changes made will be reset when
+// the development server hot-reloads the code. This is a trade-off for simplicity
+// and to resolve the persistent "stale data" issue.
+const users: { [key: string]: UserWithPassword } = JSON.parse(JSON.stringify(initialUsers));
 
 
 // Zod schema for validating new user creation data on the "server".
@@ -137,9 +138,13 @@ export const createUser = async (
   userData: CreateUserInput,
   role: 'full-time' | 'contractor' = 'full-time'
 ): Promise<{ success: boolean; message: string }> => {
-    // [SECURITY] Input Validation (OWASP A03 - Injection):
-    // Zod validation on the server-side is critical to ensure data integrity
-    // before it enters the system, even if it's already validated on the client.
+    /**
+     * [SECURITY] Input Validation (OWASP A03 - Injection)
+     *
+     * This is a critical server-side check. Never trust data from the client.
+     * Always validate on the server before processing. Zod schemas are an excellent
+     * way to enforce data structure and rules.
+     */
     if (users[userData.username]) {
         return { success: false, message: "Username already exists." };
     }
@@ -209,10 +214,13 @@ const LoginCredentialsSchema = z.object({
  * @returns A promise resolving to an AuthResponse object.
  */
 export const checkCredentials = async (username: string, pass: string): Promise<AuthResponse> => {
-  // [SECURITY] Server-Side Input Validation (OWASP A03 - Injection).
-  // This is the most critical validation step. It ensures that data conforms to the
-  // expected format before any further processing. The regex below is a restrictive
-  // allow-list for usernames, mitigating risks of many injection attacks.
+  /**
+   * [SECURITY] Server-Side Input Validation (OWASP A03 - Injection).
+   * 
+   * This is the most critical validation step. It ensures that data conforms to the
+   * expected format before any further processing. The regex below is a restrictive
+   * "allow-list" for usernames, mitigating risks of many injection attacks.
+   */
   const validation = LoginCredentialsSchema.safeParse({ username, password: pass });
   if (!validation.success) {
     // Return a generic error to prevent user enumeration and feedback on validation failures.
@@ -258,9 +266,14 @@ export const checkCredentials = async (username: string, pass: string): Promise<
 
   const user = users[username];
 
-  // [SECURITY] User Enumeration Prevention (OWASP A07 / A05):
-  // If the user doesn't exist, return a generic error message. Do not reveal
-  // that the username was the incorrect part of the credential pair.
+  /**
+   * [SECURITY] User Enumeration Prevention (OWASP A07 / A05):
+   *
+   * If the user doesn't exist, return a generic error message. Do not reveal
+   * that the username was the incorrect part of the credential pair. By returning
+   * the same message for an invalid username and an invalid password, an attacker
+   * cannot determine which one was wrong.
+   */
   if (!user) {
     return { status: 'invalid', message: 'Invalid username or password.' };
   }
@@ -273,16 +286,13 @@ export const checkCredentials = async (username: string, pass: string): Promise<
   const isPasswordCorrect = await verifyPassword(pass, user.passwordHash);
 
   if (!isPasswordCorrect) {
-    // For non-admin users, track failed attempts.
-    if (user.role !== 'admin') {
-      user.loginAttempts++;
-      // Lock the account if the attempt limit is reached.
-      if (user.loginAttempts >= MAX_LOGIN_ATTEMPTS) {
-        user.isLocked = true;
-        return { status: 'locked', message: 'Your account has been locked. Please contact support.' };
-      }
+    user.loginAttempts++;
+    // Lock the account if the attempt limit is reached.
+    if (user.loginAttempts >= MAX_LOGIN_ATTEMPTS) {
+      user.isLocked = true;
+      return { status: 'locked', message: 'Your account has been locked. Please contact support.' };
     }
-    // Return a generic error message for incorrect passwords as well.
+    // Return the same generic error message for incorrect passwords.
     return { status: 'invalid', message: 'Invalid username or password.' };
   }
   
@@ -311,6 +321,11 @@ export type SanitizedUser = Omit<UserWithPassword, 'passwordHash'>;
  * @returns A promise resolving to an array of sanitized user objects.
  */
 export const getUsers = async (): Promise<SanitizedUser[]> => {
+  /**
+   * [SECURITY] In a real application, this function would need to be a protected
+   * server-side endpoint that verifies the caller is an administrator before
+   * returning the full user list.
+   */
   return Object.values(users).map(user => {
     const { passwordHash, ...sanitizedUser } = user;
     return sanitizedUser;
@@ -323,8 +338,7 @@ export const getUsers = async (): Promise<SanitizedUser[]> => {
  * OWASP A01 - Broken Access Control & Principle of Least Privilege:
  * In a real application, this function must be a protected server-side endpoint.
  * It should first verify that the currently authenticated user (e.g., from a session token)
- * has administrative privileges before proceeding. This function simulates that check
- * by ensuring the target user is not an admin.
+ * has administrative privileges before proceeding.
  */
 export const updateUserRole = async (
   username: string,
