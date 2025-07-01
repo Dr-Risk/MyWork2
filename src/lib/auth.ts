@@ -255,17 +255,6 @@ export const checkCredentials = async (username: string, pass: string): Promise<
    * ====================================================================
    */
 
-  // A special backdoor for the primary admin to bypass lockout during development.
-  if (username === 'moqadri' && pass === 'DefaultPassword123') {
-    const user = users[username];
-    if (user) {
-      user.isLocked = false;
-      user.loginAttempts = 0;
-      const { passwordHash, loginAttempts, isLocked, passwordLastChanged, ...userProfile } = user;
-      return { status: 'success', user: userProfile };
-    }
-  }
-
   const user = users[username];
 
   // [SECURITY] User Enumeration Prevention (OWASP A07 / A05):
