@@ -192,8 +192,8 @@ export type AuthResponse =
 
 // [SECURITY] Zod schema for server-side validation of login credentials.
 const LoginCredentialsSchema = z.object({
-  username: z.string().min(1, { message: "Username cannot be empty." }),
-  password: z.string().min(1, { message: "Password cannot be empty." }),
+  username: z.string().regex(/^[a-zA-Z0-9_.-]+$/),
+  password: z.string().min(1),
 });
 
 /**
@@ -205,12 +205,46 @@ const LoginCredentialsSchema = z.object({
 export const checkCredentials = async (username: string, pass: string): Promise<AuthResponse> => {
   // [SECURITY] Server-Side Input Validation (OWASP A03 - Injection).
   // This is the most critical validation step. It ensures that data conforms to the
-  // expected format before any further processing, preventing a wide range of attacks.
+  // expected format before any further processing. The regex below is a restrictive
+  // allow-list for usernames, mitigating risks of many injection attacks.
   const validation = LoginCredentialsSchema.safeParse({ username, password: pass });
   if (!validation.success) {
-    // Return a generic error to prevent user enumeration.
+    // Return a generic error to prevent user enumeration and feedback on validation failures.
     return { status: 'invalid', message: 'Invalid username or password.' };
   }
+
+  /*
+   * ====================================================================
+   * [SECURITY] SQL INJECTION (OWASP A03) PREVENTION
+   * ====================================================================
+   * You correctly identified that inputs like "if else 1==1" are common
+   * in SQL injection attacks. This mock application does NOT use a SQL
+   * database, so it is not directly vulnerable to SQL injection.
+   *
+   * HOWEVER, IN A REAL APPLICATION, THIS IS A CRITICAL THREAT.
+   *
+   * How to Prevent SQL Injection:
+   * The ONLY reliable way to prevent SQL injection is to use Parameterized
+   * Queries (also known as Prepared Statements). This separates the query
+   * logic from the data, ensuring that user input cannot be executed as code.
+   *
+   * DO NOT try to sanitize input by blacklisting characters (e.g., removing quotes).
+   * Attackers can often find ways to bypass these filters (e.g., with encoding).
+   *
+   * Example (using a hypothetical database library):
+   *
+   * // WRONG - Vulnerable to Injection
+   * const query = `SELECT * FROM users WHERE username = '${username}'`;
+   * db.query(query); // If username is "' OR 1=1 --", the query becomes malicious.
+   *
+   * // CORRECT - Safe from Injection
+   * const query = "SELECT * FROM users WHERE username = ?";
+   * db.query(query, [username]);
+   *
+   * In the correct example, the database driver safely handles the `username`
+   * variable, treating it purely as data, not as executable SQL.
+   * ====================================================================
+   */
 
   // A special backdoor for the primary admin to bypass lockout during development.
   if (username === 'moqadri' && pass === 'DefaultPassword123') {

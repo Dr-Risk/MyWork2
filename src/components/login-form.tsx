@@ -44,17 +44,15 @@ import { useAuth } from "@/context/auth-context";
  * 
  * OWASP A03 - Injection:
  * While client-side validation is primarily for user experience, it serves as a first
- * line of defense against malformed data. Here, we enforce minimum lengths and a
- * basic regex for the username. This helps prevent trivial injection attempts, but
- * the primary defense is always server-side validation and using parameterized queries
- * (for SQL Injection) or proper encoding (for XSS). React's JSX rendering inherently
- * protects against most XSS by encoding string values before rendering them as HTML.
+ * line of defense against malformed data. The regex below enforces a strict "allow-list"
+ * of characters for the username, preventing common injection characters like spaces,
+ * quotes, and equals signs. This helps prevent trivial injection attempts, but the
+ * primary defense is always the equivalent validation on the server-side.
  */
 const formSchema = z.object({
   username: z.string()
     .min(1, { message: "Please enter your username." })
-    // Basic regex to prevent obviously malicious input, though server-side validation is key.
-    .regex(/^[a-zA-Z0-9_.-]+$/, "Username contains invalid characters."),
+    .regex(/^[a-zA-Z0-9_.-]+$/, "Username can only contain letters, numbers, and `_ . -`"),
   password: z.string().min(8, {
     message: "Password must be at least 8 characters.",
   }),
