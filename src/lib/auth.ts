@@ -30,14 +30,14 @@
  * - A03: Injection: While this mock doesn't use a database, comments explain
  *   the need for parameterized queries or prepared statements to prevent SQL
  *   Injection. For other interpreters, proper escaping and validation are key.
- *
- * - A05: Security Misconfiguration: User enumeration is prevented by providing
- *   generic login failure messages. In a real app, ensure servers have security
- *   headers, unnecessary features are disabled, etc.
  * 
  * - Cross-Site Scripting (XSS) is also related to A03. In this backend file,
  *   the primary defense is ensuring that data sent to the frontend is clean.
  *   The frontend (using React) then has the responsibility of escaping it on render.
+ *
+ * - A05: Security Misconfiguration: User enumeration is prevented by providing
+ *   generic login failure messages. In a real app, ensure servers have security
+ *   headers, unnecessary features are disabled, etc.
  *
  * - A07: Identification & Authentication Failures: The system includes concepts
  *   like password expiration and account lockout to mitigate brute-force attacks.
@@ -71,7 +71,7 @@ interface UserWithPassword extends UserProfile {
 }
 
 // In-memory "database" of users. In a real app, this would be a proper database (e.g., PostgreSQL, Firestore).
-const initialUsers: { [key: string]: UserWithPassword } = {
+const users: { [key: string]: UserWithPassword } = {
   'moqadri': {
     username: 'moqadri',
     passwordHash: 'DefaultPassword123_hashed', // Corresponds to 'DefaultPassword123'
@@ -109,15 +109,6 @@ const initialUsers: { [key: string]: UserWithPassword } = {
     isSuperUser: false,
   }
 };
-
-// In-memory "database" of users. We create a deep copy of the initial users
-// to allow for in-memory modifications (like locking an account) during the
-// application's lifecycle.
-// NOTE: Because this is a mock database, any changes made will be reset when
-// the development server hot-reloads the code. This is a trade-off for simplicity
-// and to resolve the persistent "stale data" issue.
-const users: { [key: string]: UserWithPassword } = JSON.parse(JSON.stringify(initialUsers));
-
 
 // Zod schema for validating new user creation data on the "server".
 const CreateUserSchema = z.object({
