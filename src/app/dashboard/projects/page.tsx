@@ -59,11 +59,12 @@ export default function AllProjectsPage() {
     async function loadData() {
         if (isAuthLoading) return;
         try {
-            const storedProjects = localStorage.getItem("appProjects");
-            setProjects(storedProjects ? JSON.parse(storedProjects) : initialProjects);
-
-            const storedDocs = localStorage.getItem("appDocuments");
-            setDocuments(storedDocs ? JSON.parse(storedDocs) : initialDocuments);
+            // Always start with a clean slate, ignoring localStorage for initial load.
+            localStorage.removeItem("appProjects");
+            localStorage.removeItem("appDocuments");
+            
+            setProjects(initialProjects);
+            setDocuments(initialDocuments);
             
             const allUsers = await getAllUsers();
             setUsers(allUsers);

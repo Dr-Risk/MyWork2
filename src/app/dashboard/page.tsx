@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Users, FileText, ChevronRight, HardDriveUpload, UserPlus, Gamepad2, CheckCircle2 } from "lucide-react";
+import { PlusCircle, Users, FileText, HardDriveUpload, UserPlus, Gamepad2, CheckCircle2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useRouter } from "next/navigation";
@@ -54,11 +54,12 @@ export default function DashboardPage() {
       if (isLoading) return;
 
       try {
-        const storedProjects = localStorage.getItem("appProjects");
-        setProjects(storedProjects ? JSON.parse(storedProjects) : initialProjects);
-
-        const storedDocs = localStorage.getItem("appDocuments");
-        setDocuments(storedDocs ? JSON.parse(storedDocs) : initialDocuments);
+        // Always start with a clean slate, ignoring localStorage for initial load.
+        localStorage.removeItem("appProjects");
+        localStorage.removeItem("appDocuments");
+        
+        setProjects(initialProjects);
+        setDocuments(initialDocuments);
         
         const allUsers = await getAllUsers();
         const developerUsers = await getDevelopers();
