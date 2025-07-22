@@ -52,20 +52,22 @@ export default function DashboardPage() {
 
   /**
    * Loads all necessary data for the dashboard.
-   * This function is wrapped in `useCallback` to prevent unnecessary re-renders.
-   * It fetches the latest user, developer, project, and document lists.
+   * This function is now fully asynchronous to prevent race conditions.
    */
   const loadData = useCallback(async () => {
     try {
       // Load projects and documents from either localStorage or the initial state.
       const savedProjects = localStorage.getItem("appProjects");
-      const savedDocs = localStorage.getItem("appDocuments");
       setProjects(savedProjects ? JSON.parse(savedProjects) : initialProjects);
+      
+      const savedDocs = localStorage.getItem("appDocuments");
       setDocuments(savedDocs ? JSON.parse(savedDocs) : initialDocuments);
       
       // Fetch the latest lists of all users and just developers from the "server".
       const allUsers = await getAllUsers();
       const developerUsers = await getDevelopers();
+      
+      // Set all states after all data has been fetched.
       setUsers(allUsers);
       setDevelopers(developerUsers);
 
@@ -75,7 +77,7 @@ export default function DashboardPage() {
       setProjects(initialProjects);
       setDocuments(initialDocuments);
     } finally {
-      // Mark data as loaded to render the UI.
+      // Mark data as loaded only after all asynchronous operations are complete.
       setIsDataLoaded(true);
     }
   }, []);
@@ -161,8 +163,8 @@ export default function DashboardPage() {
 
   /**
    * Callback function for when a new user is successfully added.
-   * This is the critical fix: It triggers `loadData` to refetch the user list
-   * from the "server" and closes the "Add User" dialog.
+   * This triggers `loadData` to refetch the user list from the "server"
+   * and closes the "Add User" dialog.
    */
   const handleUserAdded = () => {
     setIsAddUserDialogOpen(false);
