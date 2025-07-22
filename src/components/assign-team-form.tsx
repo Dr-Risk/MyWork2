@@ -25,25 +25,25 @@ import type { SanitizedUser } from "@/lib/auth";
  */
 
 // Zod schema for validating the form data.
-// It ensures that the `developers` field is an array of strings and that
-// at least one developer is selected.
+// It ensures that the `developers` field is an array of strings. It is now optional
+// to select a developer, allowing a project lead to unassign all developers.
 const FormSchema = z.object({
-  developers: z.array(z.string()).refine((value) => value.some((item) => item), {
-    message: "You have to select at least one developer.",
-  }),
+  developers: z.array(z.string()).default([]),
 });
 
 type AssignTeamFormProps = {
   developers: SanitizedUser[]; // The list of available developers to choose from.
+  assignedDevelopers: string[]; // The usernames of currently assigned developers.
   onSubmit: (assignedUsernames: string[]) => void; // Callback on successful submission.
 };
 
-export function AssignTeamForm({ developers, onSubmit }: AssignTeamFormProps) {
+export function AssignTeamForm({ developers, assignedDevelopers, onSubmit }: AssignTeamFormProps) {
   // Initialize react-hook-form with the Zod resolver.
+  // The default values for the checkboxes are pre-populated from the `assignedDevelopers` prop.
   const form = useForm<z.infer<typeof FormSchema>>({
     resolver: zodResolver(FormSchema),
     defaultValues: {
-      developers: [],
+      developers: assignedDevelopers || [],
     },
   });
 
@@ -87,9 +87,9 @@ export function AssignTeamForm({ developers, onSubmit }: AssignTeamFormProps) {
                               // When the checkbox state changes, add or remove the username from the array.
                               onCheckedChange={(checked) => {
                                 return checked
-                                  ? field.onChange([...field.value, item.username])
+                                  ? field.onChange([...(field.value || []), item.username])
                                   : field.onChange(
-                                      field.value?.filter(
+                                      (field.value || []).filter(
                                         (value) => value !== item.username
                                       )
                                     );
@@ -109,7 +109,7 @@ export function AssignTeamForm({ developers, onSubmit }: AssignTeamFormProps) {
             </FormItem>
           )}
         />
-        <Button type="submit">Assign to Project</Button>
+        <Button type="submit">Update Team</Button>
       </form>
     </Form>
   );

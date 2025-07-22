@@ -128,21 +128,18 @@ export default function DashboardPage() {
 
   /**
    * Handles assigning developers to a project.
-   * It updates the project's `assignedDevelopers` array, ensuring no duplicates,
-   * closes the dialog, and shows a success toast.
+   * This function now REPLACES the existing developer list with the new one.
    */
   const handleAssignTeam = (projectId: number, assignedUsernames: string[]) => {
      setProjects(prev => prev.map(p => {
         if (p.id === projectId) {
-            // Use a Set to efficiently merge new and existing developers, avoiding duplicates.
-            const currentDevs = new Set(p.assignedDevelopers);
-            assignedUsernames.forEach(username => currentDevs.add(username));
-            return { ...p, assignedDevelopers: Array.from(currentDevs) };
+            // Replace the old list of developers with the newly submitted list.
+            return { ...p, assignedDevelopers: assignedUsernames };
         }
         return p;
     }));
     setAssignTeamProjectId(null); // Close the dialog.
-    toast({ title: "Team Updated", description: "Developers have been assigned to the project." });
+    toast({ title: "Team Updated", description: "The project team has been updated." });
   };
 
   /**
@@ -194,8 +191,8 @@ export default function DashboardPage() {
      */
     const canManageProject = user?.role === 'admin' || (user?.role === 'project-lead' && user.username === project.lead);
     
-    // Determine if the "Assign Team" button should be shown. Only for Project Leads.
-    const canAssignTeam = user?.role === 'project-lead' && user.username === project.lead;
+    // Determine if the "Assign Team" button should be shown. Only for the assigned Project Lead or an Admin.
+    const canAssignTeam = user?.role === 'admin' || (user?.role === 'project-lead' && user.username === project.lead);
 
     return (
       <Card className="flex flex-col">
@@ -241,7 +238,7 @@ export default function DashboardPage() {
           </div>
         </CardContent>
         <CardFooter className="grid grid-cols-2 gap-2">
-            {/* [PERMISSIONS] "Assign Team" button is only for Project Leads on their projects. */}
+            {/* [PERMISSIONS] "Assign Team" button is for Admins and Project Leads on their projects. */}
             {canAssignTeam && (
                 <Dialog open={assignTeamProjectId === project.id} onOpenChange={(isOpen) => setAssignTeamProjectId(isOpen ? project.id : null)}>
                   <DialogTrigger asChild>
@@ -250,11 +247,12 @@ export default function DashboardPage() {
                   <DialogContent>
                       <DialogHeader>
                           <DialogTitle>Assign Team to "{project.name}"</DialogTitle>
-                          <DialogDescription>Select developers to add to this project.</DialogDescription>
+                          <DialogDescription>Select developers to add or remove from this project.</DialogDescription>
                       </DialogHeader>
                       <AssignTeamForm 
-                        // Pass only users with the 'developer' role to the form.
                         developers={developers} 
+                        // Pass the list of currently assigned developers to pre-select them.
+                        assignedDevelopers={project.assignedDevelopers}
                         onSubmit={(devs) => handleAssignTeam(project.id, devs)}
                       />
                   </DialogContent>
