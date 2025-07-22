@@ -168,14 +168,16 @@ export default function DashboardPage() {
   const handleFileUpload = (projectId: number, file: File) => {
     const reader = new FileReader();
     reader.onload = (event) => {
-      const newDocument: Document = {
-        id: Date.now(),
-        name: file.name,
-        url: event.target?.result as string, // Store the file content as a Data URI
-        projectId,
-      };
-      setDocuments(prev => [newDocument, ...prev]);
-      toast({ title: "File Uploaded", description: `"${file.name}" has been added to the project.` });
+      if (event.target?.result) {
+        const newDocument: Document = {
+          id: Date.now(),
+          name: file.name,
+          url: event.target.result as string, // Store the file content as a Data URI
+          projectId,
+        };
+        setDocuments(prev => [newDocument, ...prev]);
+        toast({ title: "File Uploaded", description: `"${file.name}" has been added to the project.` });
+      }
     };
     reader.readAsDataURL(file);
   };
