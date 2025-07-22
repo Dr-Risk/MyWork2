@@ -50,7 +50,7 @@ export default function RootLayout({
     <html
       lang="en"
       // Apply the font variables to the html tag.
-      className={`${ptSans.variable} ${spaceGrotesk.variable}`}
+      className={`${ptSans.variable} ${spaceGrotesk.variable} dark`}
       // Suppress a common warning related to extensions modifying the DOM.
       suppressHydrationWarning
     >
