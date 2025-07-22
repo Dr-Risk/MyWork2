@@ -73,7 +73,6 @@ export function LoginForm({ onMfaRequired }: LoginFormProps) {
    */
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
-    await new Promise((resolve) => setTimeout(resolve, 500));
     const response = await checkCredentials(values.username, values.password);
     setIsLoading(false);
 
