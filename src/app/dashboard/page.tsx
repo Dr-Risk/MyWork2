@@ -183,16 +183,13 @@ export default function DashboardPage() {
     
     /**
      * [SECURITY] Role-Based Access Control (RBAC) Logic
-     * This variable determines if the current user has management privileges
-     * over this specific project (assigning teams, uploading documents).
-     *
-     * Rules:
-     * - 'admin': Admins have universal management rights over all projects.
-     * - 'project-lead': Project Leads can only manage projects where their
-     *   `username` matches the project's `lead` field. They cannot manage
-     *   projects they are merely assigned to as a developer.
+     * These variables determine if the current user has specific privileges
+     * over this project. This ensures a strict separation of duties.
      */
-    const canManageProject = user?.role === 'admin' || (user?.role === 'project-lead' && user.username === project.lead);
+    // Only the assigned project lead can assign developers.
+    const canAssignTeam = user?.role === 'project-lead' && user.username === project.lead;
+    // Admins and the assigned project lead can upload documents.
+    const canUploadDocs = user?.role === 'admin' || (user?.role === 'project-lead' && user.username === project.lead);
 
     return (
       <Card className="flex flex-col">
@@ -238,8 +235,8 @@ export default function DashboardPage() {
           </div>
         </CardContent>
         <CardFooter className="grid grid-cols-2 gap-2">
-            {/* [PERMISSIONS] "Assign Team" button is for Admins and Project Leads on their projects. */}
-            {canManageProject && (
+            {/* [PERMISSIONS] The "Assign Team" button is ONLY for the designated Project Lead. */}
+            {canAssignTeam && (
                 <Dialog open={assignTeamProjectId === project.id} onOpenChange={(isOpen) => setAssignTeamProjectId(isOpen ? project.id : null)}>
                   <DialogTrigger asChild>
                       <Button variant="outline"><UserPlus className="mr-2"/> Assign Team</Button>
@@ -260,7 +257,7 @@ export default function DashboardPage() {
             )}
             
             {/* [PERMISSIONS] "Upload Docs" is for Admins and the designated Project Lead. */}
-            {canManageProject && (
+            {canUploadDocs && (
                 <Button variant="outline" onClick={() => document.getElementById(`file-upload-${project.id}`)?.click()}>
                     <HardDriveUpload className="mr-2"/> Upload Docs
                 </Button>
