@@ -24,7 +24,7 @@
   "utaker": {
     "username": "utaker",
     "passwordHash": "Utaker123_hashed",
-    "role": "project-lead",
+    "role": "developer",
     "name": "undertaker",
     "initials": "U",
     "email": "utaker@example.com",

@@ -87,8 +87,6 @@ export default function DashboardPage() {
 
   // Load data when the component mounts or auth state changes.
   useEffect(() => {
-    // This condition was incorrectly preventing re-fetches. Removing it ensures
-    // that `loadData` can be called multiple times to refresh the user list.
     loadData();
   }, [loadData]);
 
@@ -195,6 +193,9 @@ export default function DashboardPage() {
      *   projects they are merely assigned to as a developer.
      */
     const canManageProject = user?.role === 'admin' || (user?.role === 'project-lead' && user.username === project.lead);
+    
+    // Determine if the "Assign Team" button should be shown. Only for Project Leads.
+    const canAssignTeam = user?.role === 'project-lead' && user.username === project.lead;
 
     return (
       <Card className="flex flex-col">
@@ -240,32 +241,33 @@ export default function DashboardPage() {
           </div>
         </CardContent>
         <CardFooter className="grid grid-cols-2 gap-2">
-            {/* [PERMISSIONS] Show management buttons only if canManageProject is true. */}
-            {canManageProject && (
-                <>
-                    <Dialog open={assignTeamProjectId === project.id} onOpenChange={(isOpen) => setAssignTeamProjectId(isOpen ? project.id : null)}>
-                      <DialogTrigger asChild>
-                          <Button variant="outline"><UserPlus className="mr-2"/> Assign Team</Button>
-                      </DialogTrigger>
-                      <DialogContent>
-                          <DialogHeader>
-                              <DialogTitle>Assign Team to "{project.name}"</DialogTitle>
-                              <DialogDescription>Select developers to add to this project.</DialogDescription>
-                          </DialogHeader>
-                          <AssignTeamForm 
-                            // Pass only users with the 'developer' role to the form.
-                            developers={developers} 
-                            onSubmit={(devs) => handleAssignTeam(project.id, devs)}
-                          />
-                      </DialogContent>
-                    </Dialog>
-                    
-                    <Button variant="outline" onClick={() => document.getElementById(`file-upload-${project.id}`)?.click()}>
-                        <HardDriveUpload className="mr-2"/> Upload Docs
-                    </Button>
-                    <input type="file" id={`file-upload-${project.id}`} className="hidden" onChange={(e) => e.target.files && handleFileUpload(project.id, e.target.files[0])}/>
-                </>
+            {/* [PERMISSIONS] "Assign Team" button is only for Project Leads on their projects. */}
+            {canAssignTeam && (
+                <Dialog open={assignTeamProjectId === project.id} onOpenChange={(isOpen) => setAssignTeamProjectId(isOpen ? project.id : null)}>
+                  <DialogTrigger asChild>
+                      <Button variant="outline"><UserPlus className="mr-2"/> Assign Team</Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                      <DialogHeader>
+                          <DialogTitle>Assign Team to "{project.name}"</DialogTitle>
+                          <DialogDescription>Select developers to add to this project.</DialogDescription>
+                      </DialogHeader>
+                      <AssignTeamForm 
+                        // Pass only users with the 'developer' role to the form.
+                        developers={developers} 
+                        onSubmit={(devs) => handleAssignTeam(project.id, devs)}
+                      />
+                  </DialogContent>
+                </Dialog>
             )}
+            
+            {/* [PERMISSIONS] "Upload Docs" is for Admins and the designated Project Lead. */}
+            {canManageProject && (
+                <Button variant="outline" onClick={() => document.getElementById(`file-upload-${project.id}`)?.click()}>
+                    <HardDriveUpload className="mr-2"/> Upload Docs
+                </Button>
+            )}
+            <input type="file" id={`file-upload-${project.id}`} className="hidden" onChange={(e) => e.target.files && handleFileUpload(project.id, e.target.files[0])}/>
             
             {/* [PERMISSIONS] The "Mark as Complete" action is strictly admin-only. */}
             {user?.role === 'admin' && project.status === 'Active' && (
@@ -369,5 +371,3 @@ export default function DashboardPage() {
     </>
   );
 }
-
-    
