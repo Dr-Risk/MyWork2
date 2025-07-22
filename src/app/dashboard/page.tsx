@@ -29,7 +29,7 @@ import { getDevelopers, getUsers as getAllUsers, type SanitizedUser } from "@/li
  * @fileoverview Main Dashboard Page for PixelForge Nexus
  * @description This is the primary landing page after a user logs in. It displays a list
  * of projects and provides functionality based on the user's role:
- * - Admins: Can add new projects, mark projects as complete, and manage users.
+ * - Admins: Can add new projects, mark projects as complete, manage users, assign teams and upload documents.
  * - Project Leads: Can assign developers to their projects and upload documents.
  * - Developers: See a list of projects they are assigned to.
  */
@@ -87,6 +87,8 @@ export default function DashboardPage() {
 
   // Load data when the component mounts or auth state changes.
   useEffect(() => {
+    // This condition was incorrectly preventing re-fetches. Removing it ensures
+    // that `loadData` can be called multiple times to refresh the user list.
     loadData();
   }, [loadData]);
 
@@ -180,6 +182,9 @@ export default function DashboardPage() {
     const projectDocs = documents.filter(d => d.projectId === project.id);
     const assignedDevsList = users.filter(u => project.assignedDevelopers.includes(u.username));
     const projectLead = users.find(u => u.username === project.lead);
+    
+    // [PERMISSIONS] Determine if the current user has lead/admin privileges over this project.
+    const canManageProject = user?.role === 'admin' || (user?.role === 'project-lead' && user.username === project.lead);
 
     return (
       <Card className="flex flex-col">
@@ -225,8 +230,8 @@ export default function DashboardPage() {
           </div>
         </CardContent>
         <CardFooter className="grid grid-cols-2 gap-2">
-            {/* Conditional rendering for Project Lead actions */}
-            {user?.role === 'project-lead' && user.username === project.lead && (
+            {/* Conditional rendering for Admin and Project Lead actions */}
+            {canManageProject && (
                 <>
                     <Dialog open={assignTeamProjectId === project.id} onOpenChange={(isOpen) => setAssignTeamProjectId(isOpen ? project.id : null)}>
                       <DialogTrigger asChild>
@@ -251,7 +256,8 @@ export default function DashboardPage() {
                     <input type="file" id={`file-upload-${project.id}`} className="hidden" onChange={(e) => e.target.files && handleFileUpload(project.id, e.target.files[0])}/>
                 </>
             )}
-            {/* Conditional rendering for Admin actions */}
+            
+            {/* "Mark as Complete" is still admin-only and only for active projects. */}
             {user?.role === 'admin' && project.status === 'Active' && (
                  <Button variant="default" onClick={() => handleCompleteProject(project.id)} className="col-span-2">
                     <CheckCircle2 className="mr-2"/> Mark as Complete
@@ -352,5 +358,3 @@ export default function DashboardPage() {
     </>
   );
 }
-
-    
