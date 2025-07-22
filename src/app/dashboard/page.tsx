@@ -83,12 +83,10 @@ export default function DashboardPage() {
       setProjects(initialProjects);
       setDocuments(initialDocuments);
     } finally {
-      // Mark data as loaded to render the UI. This should only happen once on initial load.
-      if (!isDataLoaded) {
-        setIsDataLoaded(true);
-      }
+      // Mark data as loaded to render the UI.
+      setIsDataLoaded(true);
     }
-  }, [isLoading, isDataLoaded]); // isDataLoaded dependency is kept for the initial load check.
+  }, [isLoading]);
 
   // Load data when the component mounts or auth state changes.
   useEffect(() => {
@@ -333,7 +331,7 @@ export default function DashboardPage() {
                         </DialogHeader>
                         <AddProjectForm 
                           // Pass the list of potential leads to the form.
-                          projectLeads={users.filter(u => u.role === 'project-lead' || u.role === 'admin')} 
+                          projectLeads={users.filter(u => u.role !== 'admin')} 
                           onSubmit={handleAddProject} 
                         />
                     </DialogContent>
