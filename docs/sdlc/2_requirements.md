@@ -44,7 +44,7 @@ Building upon the initial assessment, this section provides a more detailed anal
 | **R-02** | **Broken Access Control** | A Developer could access admin-only functions by guessing URLs (e.g., `/dashboard/users`). | **High** | **SR-02, SR-03**: Enforce server-side authorization checks on every sensitive action and client-side checks for page access. Redirect unauthorized users. |
 | **R-03** | **Credential Theft** | An attacker performs a brute-force attack to guess passwords. | **High** | **SR-04**: Implement an account lockout mechanism after 3 failed attempts. |
 | **R-04** | **User Enumeration** | An attacker uses the login page's error messages to determine which usernames are valid. | **Medium** | **SR-05**: Provide a generic error message ("Invalid username or password") for both invalid usernames and passwords. |
-| **R-05** | **Accidental Data Deletion** | A legitimate user (Admin/Lead) accidentally deletes a critical document or project. | **Medium** | **SR-06**: Implement a confirmation dialog (`AlertDialog`) for all destructive actions to prevent mistakes. |
+| **R-05** | **Accidental Data Deletion** | A legitimate user (Admin/Lead) accidentally deletes a critical document or project. | **Medium** | **SR-06**: Implement a confirmation dialog (`AlertDialog` component) for all destructive actions to prevent mistakes. |
 
 ## 2.4 Final Security Requirements (SR)
 
