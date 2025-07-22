@@ -57,6 +57,7 @@ export default function DashboardPage() {
    * This function is now fully asynchronous to prevent race conditions.
    */
   const loadData = useCallback(async () => {
+    setIsDataLoaded(false); // Set loading state to false initially
     try {
       // Load projects and documents from either localStorage or the initial state.
       const savedProjects = localStorage.getItem("appProjects");
@@ -407,3 +408,5 @@ export default function DashboardPage() {
     </>
   );
 }
+
+    
