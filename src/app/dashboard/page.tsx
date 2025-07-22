@@ -60,7 +60,7 @@ export default function DashboardPage() {
    * then fetches the latest user and developer lists.
    */
   const loadData = useCallback(async () => {
-    // This check was removed `!isDataLoaded` to ensure we can re-fetch data on demand.
+    // If the auth state is still loading, we can't proceed.
     if (isLoading) return;
 
     try {
@@ -86,12 +86,12 @@ export default function DashboardPage() {
       setProjects(initialProjects);
       setDocuments(initialDocuments);
     } finally {
-      // Mark data as loaded to render the UI.
+      // Mark data as loaded to render the UI. This only needs to happen once.
       if (!isDataLoaded) {
         setIsDataLoaded(true);
       }
     }
-  }, [isLoading, isDataLoaded]); // Dependency array is correct.
+  }, [isLoading, isDataLoaded]); // Correct dependency array.
 
   // Load data when the component mounts or auth state changes.
   useEffect(() => {
@@ -171,13 +171,14 @@ export default function DashboardPage() {
 
   /**
    * Callback function for when a new user is successfully added.
-   * It triggers `loadData` to refetch the user list and updates a key
-   * for the AddUserForm to ensure the component fully re-renders with a clean state.
+   * This is the critical fix: It triggers `loadData` to refetch the user list
+   * from the "server" and updates a key for the AddUserForm to ensure the
+   * component fully re-renders with a clean state.
    */
   const handleUserAdded = () => {
     // Changing the key will unmount the old AddUserForm and mount a new one.
     setAddUserFormKey(Date.now());
-    // Refetch the user data to ensure the UI is up-to-date.
+    // Refetch the user data to ensure the UI is up-to-date with the new user.
     loadData();
   };
 

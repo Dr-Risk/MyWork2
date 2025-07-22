@@ -71,5 +71,3 @@ This was a classic client-side state management issue. The main dashboard compon
     1.  Navigated to the "Manage Users" dialog and created a new user with the "Project Lead" role.
     2.  Closed the dialog and immediately opened the "Add Project" dialog.
     3.  **Outcome**: Verified that the newly created user appeared in the "Project Lead" dropdown list without requiring a page refresh. The fix was confirmed to be successful.
-
-    
