@@ -12,10 +12,21 @@ import {
   CardFooter,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { PlusCircle, Users, FileText, HardDriveUpload, UserPlus, Gamepad2, CheckCircle2, Replace, Eye, Download } from "lucide-react";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { PlusCircle, Users, FileText, HardDriveUpload, UserPlus, Gamepad2, CheckCircle2, Replace, Eye, Download, Trash2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { useRouter } from "next/navigation";
 import { initialProjects, initialDocuments } from "@/lib/projects";
 import type { Project, Document } from "@/lib/projects";
@@ -30,8 +41,8 @@ import { getDevelopers, getUsers as getAllUsers, type SanitizedUser } from "@/li
  * @fileoverview Main Dashboard Page for PixelForge Nexus
  * @description This is the primary landing page after a user logs in. It displays a list
  * of projects and provides functionality based on the user's role:
- * - Admins: Can add new projects, mark projects as complete, manage users, assign teams and upload documents.
- * - Project Leads: Can assign developers to their projects and upload documents.
+ * - Admins: Can add new projects, mark projects as complete, manage users, assign teams and upload/delete documents.
+ * - Project Leads: Can assign developers to their projects and upload/delete documents.
  * - Developers: See a list of projects they are assigned to.
  */
 export default function DashboardPage() {
@@ -181,6 +192,19 @@ export default function DashboardPage() {
     };
     reader.readAsDataURL(file);
   };
+
+  /**
+   * Handles permanently deleting a document after user confirmation.
+   * [PERMISSIONS] This action is restricted to Admins and Project Leads.
+   */
+  const handleDeleteDocument = (documentId: number) => {
+    setDocuments(prev => prev.filter(doc => doc.id !== documentId));
+    toast({
+        variant: "destructive",
+        title: "Document Deleted",
+        description: "The document has been permanently removed.",
+    });
+  };
   
   /**
    * Opens a new window to display the document content.
@@ -227,8 +251,8 @@ export default function DashboardPage() {
      */
     // Only the assigned project lead can assign developers.
     const canAssignTeam = user?.role === 'project-lead' && user.username === project.lead;
-    // Admins and the assigned project lead can upload documents.
-    const canUploadDocs = user?.role === 'admin' || (user?.role === 'project-lead' && user.username === project.lead);
+    // Admins and the assigned project lead can upload or delete documents.
+    const canManageDocs = user?.role === 'admin' || (user?.role === 'project-lead' && user.username === project.lead);
     // Only admins can change the project lead.
     const canEditProject = user?.role === 'admin';
 
@@ -291,7 +315,7 @@ export default function DashboardPage() {
                                 <FileText className="h-4 w-4 mr-2 text-muted-foreground flex-shrink-0" />
                                 <span className="truncate" title={doc.name}>{doc.name}</span>
                             </div>
-                            <div className="flex items-center gap-2 ml-2">
+                            <div className="flex items-center gap-1 ml-2">
                                 <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleViewDocument(doc)} title="View document">
                                     <Eye className="h-4 w-4" />
                                 </Button>
@@ -300,6 +324,33 @@ export default function DashboardPage() {
                                         <Download className="h-4 w-4" />
                                     </Button>
                                 </a>
+                                {/* [PERMISSIONS] Delete button only for Admins and Project Leads */}
+                                {canManageDocs && (
+                                    <AlertDialog>
+                                        <AlertDialogTrigger asChild>
+                                            <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:bg-destructive/90 hover:text-destructive-foreground" title="Delete document">
+                                                <Trash2 className="h-4 w-4" />
+                                            </Button>
+                                        </AlertDialogTrigger>
+                                        <AlertDialogContent>
+                                            <AlertDialogHeader>
+                                            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                            <AlertDialogDescription>
+                                                This action cannot be undone. This will permanently delete the document "{doc.name}".
+                                            </AlertDialogDescription>
+                                            </AlertDialogHeader>
+                                            <AlertDialogFooter>
+                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                            <AlertDialogAction 
+                                                className={buttonVariants({ variant: "destructive" })}
+                                                onClick={() => handleDeleteDocument(doc.id)}
+                                            >
+                                                Yes, delete document
+                                            </AlertDialogAction>
+                                            </AlertDialogFooter>
+                                        </AlertDialogContent>
+                                    </AlertDialog>
+                                )}
                             </div>
                         </li>
                     ))}
@@ -332,7 +383,7 @@ export default function DashboardPage() {
             )}
             
             {/* [PERMISSIONS] "Upload Docs" is for Admins and the designated Project Lead. */}
-            {canUploadDocs && (
+            {canManageDocs && (
                 <Button variant="outline" onClick={() => document.getElementById(`file-upload-${project.id}`)?.click()}>
                     <HardDriveUpload className="mr-2"/> Upload Docs
                 </Button>
@@ -443,3 +494,5 @@ export default function DashboardPage() {
   );
 }
  
+
+    
