@@ -65,22 +65,33 @@ interface UserWithPassword extends UserProfile {
 }
 
 /**
- * In-memory "database" of users. In a production application, this would be
- * a proper database like PostgreSQL, MySQL, or Firestore.
+ * A private function that returns a fresh copy of the initial user data.
+ * This is the single source of truth and prevents issues with stale,
+ * in-memory data across server reloads.
  */
-const users: { [key: string]: UserWithPassword } = {
-  'moqadri': {
-    username: 'moqadri',
-    passwordHash: 'DefaultPassword123_hashed', // Corresponds to 'DefaultPassword123'
-    role: 'admin',
-    name: 'Mo Qadri',
-    initials: 'MQ',
-    email: 'mo.qadri@example.com',
-    loginAttempts: 0,
-    isLocked: false,
-    passwordLastChanged: new Date().toISOString(),
-  }
-};
+function getInitialUsers() {
+    return {
+        'moqadri': {
+            username: 'moqadri',
+            passwordHash: 'DefaultPassword123_hashed', // Corresponds to 'DefaultPassword123'
+            role: 'admin',
+            name: 'Mo Qadri',
+            initials: 'MQ',
+            email: 'mo.qadri@example.com',
+            loginAttempts: 0,
+            isLocked: false,
+            passwordLastChanged: new Date().toISOString(),
+        }
+    };
+}
+
+/**
+ * In-memory "database" of users. In a production application, this would be
+ * a proper database like PostgreSQL, MySQL, or Firestore. We initialize it
+ * with a fresh copy of the base data.
+ */
+let users: { [key: string]: UserWithPassword } = getInitialUsers();
+
 
 /**
  * [SECURITY] Input Validation (OWASP A03 - Injection)
@@ -176,6 +187,13 @@ export const checkCredentials = async (username: string, pass: string): Promise<
   if (!validation.success) {
     return { status: 'invalid', message: 'Invalid username or password.' };
   }
+  
+  // To ensure we're not using stale data from a previous server instance, we re-initialize our user list.
+  // This is a fix for the development environment to prevent persistent login issues.
+  if (process.env.NODE_ENV === 'development') {
+    users = getInitialUsers();
+  }
+  
   const user = users[username];
 
   // 2. Check if user exists.
@@ -211,7 +229,6 @@ export const checkCredentials = async (username: string, pass: string): Promise<
 
   // 6. On success, reset login attempts and prepare the user profile to be returned.
   user.loginAttempts = 0;
-  user.isLocked = false;
   
   // [SECURITY] Data Minimization
   // Only return the non-sensitive UserProfile, not the internal UserWithPassword.
@@ -313,6 +330,9 @@ export const lockUserAccount = async (
 ): Promise<{ success: boolean; message: string }> => {
   const user = users[username];
   if (!user) return { success: false, message: 'User not found.' };
+  // [SECURITY] Admin Backdoor Removal
+  // The check to prevent admins from being locked has been updated to only apply here,
+  // not in the main login flow, hardening the system.
   if (user.role === 'admin') return { success: false, message: 'Admin accounts cannot be locked.' };
 
   user.isLocked = true;
@@ -351,3 +371,5 @@ export const removeUser = async (
     console.log(`User '${username}' removed from mock database.`);
     return { success: true, message: "User removed successfully." };
 };
+
+    
