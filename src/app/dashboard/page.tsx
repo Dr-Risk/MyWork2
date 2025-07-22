@@ -87,8 +87,12 @@ export default function DashboardPage() {
 
   // Load data when the component mounts or auth state changes.
   useEffect(() => {
-    loadData();
-  }, [loadData]);
+    // This effect ensures that data is loaded once the user's authentication
+    // status is confirmed, preventing race conditions.
+    if (!isLoading) {
+      loadData();
+    }
+  }, [isLoading, loadData]);
 
 
   /**
@@ -97,6 +101,8 @@ export default function DashboardPage() {
    * ensuring that the user's data is saved across browser sessions.
    */
   useEffect(() => {
+    // We only want to save to localStorage after the initial data has been loaded
+    // to prevent overwriting the stored data with an empty initial state.
     if (isDataLoaded) {
       localStorage.setItem("appProjects", JSON.stringify(projects));
       localStorage.setItem("appDocuments", JSON.stringify(documents));
@@ -304,6 +310,7 @@ export default function DashboardPage() {
   }
 
   const visibleProjects = getVisibleProjects();
+  const projectLeads = users.filter(u => u.role === 'project-lead');
 
   return (
     <>
@@ -343,7 +350,7 @@ export default function DashboardPage() {
                         </DialogHeader>
                         <AddProjectForm 
                           // Pass users with 'project-lead' role to the form.
-                          projectLeads={users.filter(u => u.role === 'project-lead')} 
+                          projectLeads={projectLeads} 
                           onSubmit={handleAddProject} 
                         />
                     </DialogContent>
