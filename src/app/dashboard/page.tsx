@@ -179,6 +179,24 @@ export default function DashboardPage() {
     };
     reader.readAsDataURL(file);
   };
+  
+  /**
+   * Opens a new window to display the document content.
+   * This avoids issues with the Next.js router trying to handle the Data URI.
+   */
+  const handleViewDocument = (doc: Document) => {
+    const newWindow = window.open("", "_blank");
+    if (newWindow) {
+      newWindow.document.write(`<style>body { margin: 0; background: #222; }</style><iframe src="${doc.url}" frameborder="0" style="border:0; top:0px; left:0px; bottom:0px; right:0px; width:100%; height:100vh;" allowfullscreen></iframe>`);
+      newWindow.document.title = doc.name;
+    } else {
+        toast({
+            variant: "destructive",
+            title: "Popup Blocked",
+            description: "Please allow popups for this site to view documents."
+        });
+    }
+  };
 
   /**
    * Callback function for when a new user is successfully added.
@@ -272,11 +290,9 @@ export default function DashboardPage() {
                                 <span className="truncate" title={doc.name}>{doc.name}</span>
                             </div>
                             <div className="flex items-center gap-2 ml-2">
-                                <a href={doc.url} target="_blank" rel="noopener noreferrer" title="View document">
-                                    <Button variant="ghost" size="icon" className="h-7 w-7">
-                                        <Eye className="h-4 w-4" />
-                                    </Button>
-                                </a>
+                                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleViewDocument(doc)} title="View document">
+                                    <Eye className="h-4 w-4" />
+                                </Button>
                                 <a href={doc.url} download={doc.name} title="Download document">
                                      <Button variant="ghost" size="icon" className="h-7 w-7">
                                         <Download className="h-4 w-4" />
@@ -424,3 +440,4 @@ export default function DashboardPage() {
     </>
   );
 }
+ 
