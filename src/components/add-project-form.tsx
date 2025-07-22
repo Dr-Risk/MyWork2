@@ -60,6 +60,7 @@ export function AddProjectForm({ projectLeads, onSubmit }: AddProjectFormProps) 
   function handleSubmit(values: z.infer<typeof formSchema>) {
     onSubmit({
         ...values,
+        assignedDevelopers: [],
     });
   }
 
@@ -137,3 +138,4 @@ export function AddProjectForm({ projectLeads, onSubmit }: AddProjectFormProps) 
     </Form>
   );
 }
+

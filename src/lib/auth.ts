@@ -17,6 +17,11 @@
  */
 
 import { z } from "zod";
+import fs from 'fs';
+import path from 'path';
+
+// Path to the mock database file
+const dbPath = path.join(process.cwd(), 'src', 'lib', 'users.json');
 
 /**
  * @interface UserProfile
@@ -65,11 +70,41 @@ interface UserWithPassword extends UserProfile {
 }
 
 /**
- * A private function that returns a fresh copy of the initial user data.
- * This is the single source of truth and prevents issues with stale,
- * in-memory data across server reloads.
+ * Reads all users from the users.json file.
+ * @returns A promise that resolves to the user data object.
  */
-function getInitialUsers() {
+const readUsersFromFile = async (): Promise<{ [key: string]: UserWithPassword }> => {
+    try {
+        if (!fs.existsSync(dbPath)) {
+            const initialUsers = getInitialUsers();
+            await writeUsersToFile(initialUsers);
+            return initialUsers;
+        }
+        const data = await fs.promises.readFile(dbPath, 'utf-8');
+        return JSON.parse(data);
+    } catch (error) {
+        console.error('Error reading users from file, falling back to initial data.', error);
+        return getInitialUsers();
+    }
+};
+
+/**
+ * Writes the entire user object to the users.json file.
+ * @param data The user data to write.
+ */
+const writeUsersToFile = async (data: { [key: string]: UserWithPassword }): Promise<void> => {
+    try {
+        await fs.promises.writeFile(dbPath, JSON.stringify(data, null, 2));
+    } catch (error) {
+        console.error('Error writing users to file.', error);
+    }
+};
+
+/**
+ * A private function that returns a fresh copy of the initial user data.
+ * This is the single source of truth for initializing the mock database.
+ */
+function getInitialUsers(): { [key: string]: UserWithPassword } {
     return {
         'moqadri': {
             username: 'moqadri',
@@ -84,13 +119,6 @@ function getInitialUsers() {
         }
     };
 }
-
-/**
- * In-memory "database" of users. In a production application, this would be
- * a proper database like PostgreSQL, MySQL, or Firestore. We initialize it
- * with a fresh copy of the base data.
- */
-let users: { [key: string]: UserWithPassword } = getInitialUsers();
 
 
 /**
@@ -117,6 +145,7 @@ type CreateUserInput = z.infer<typeof CreateUserSchema>;
 export const createUser = async (
   userData: CreateUserInput
 ): Promise<{ success: boolean; message:string }> => {
+    const users = await readUsersFromFile();
     // Prevent username collisions.
     if (users[userData.username]) {
         return { success: false, message: "Username already exists." };
@@ -136,6 +165,7 @@ export const createUser = async (
         isLocked: false,
         passwordLastChanged: new Date().toISOString(),
     };
+    await writeUsersToFile(users);
 
     console.log(`User '${userData.username}' created in mock database.`);
     return { success: true, message: "User created successfully." };
@@ -188,12 +218,7 @@ export const checkCredentials = async (username: string, pass: string): Promise<
     return { status: 'invalid', message: 'Invalid username or password.' };
   }
   
-  // To ensure we're not using stale data from a previous server instance, we re-initialize our user list.
-  // This is a fix for the development environment to prevent persistent login issues.
-  if (process.env.NODE_ENV === 'development') {
-    users = getInitialUsers();
-  }
-  
+  const users = await readUsersFromFile();
   const user = users[username];
 
   // 2. Check if user exists.
@@ -215,8 +240,8 @@ export const checkCredentials = async (username: string, pass: string): Promise<
     user.loginAttempts++;
     if (user.loginAttempts >= MAX_LOGIN_ATTEMPTS) {
       user.isLocked = true;
-      return { status: 'locked', message: 'Your account has been locked. Please contact support.' };
     }
+    await writeUsersToFile(users); // Save updated attempts/lock status.
     return { status: 'invalid', message: 'Invalid username or password.' };
   }
   
@@ -229,6 +254,7 @@ export const checkCredentials = async (username: string, pass: string): Promise<
 
   // 6. On success, reset login attempts and prepare the user profile to be returned.
   user.loginAttempts = 0;
+  await writeUsersToFile(users);
   
   // [SECURITY] Data Minimization
   // Only return the non-sensitive UserProfile, not the internal UserWithPassword.
@@ -246,6 +272,7 @@ export type SanitizedUser = Omit<UserWithPassword, 'passwordHash'>;
  * Retrieves a list of all users without their password hashes.
  */
 export const getUsers = async (): Promise<SanitizedUser[]> => {
+  const users = await readUsersFromFile();
   return Object.values(users).map(user => {
     const { passwordHash, ...sanitizedUser } = user;
     return sanitizedUser;
@@ -267,6 +294,7 @@ export const updateUserRole = async (
   username: string,
   newRole: 'project-lead' | 'developer'
 ): Promise<{ success: boolean; message: string }> => {
+  const users = await readUsersFromFile();
   const user = users[username];
 
   if (!user) return { success: false, message: 'User not found.' };
@@ -275,6 +303,7 @@ export const updateUserRole = async (
   if (user.role === 'admin') return { success: false, message: 'Cannot change the role of an admin user.' };
 
   user.role = newRole;
+  await writeUsersToFile(users);
   console.log(`User '${username}' role updated to '${newRole}' in mock database.`);
   return { success: true, message: 'User role updated successfully.' };
 };
@@ -287,12 +316,14 @@ export const updateUserProfile = async (
   username: string,
   data: { name: string; email: string }
 ): Promise<{ success: boolean; message: string; user?: UserProfile }> => {
+  const users = await readUsersFromFile();
   const user = users[username];
   if (!user) return { success: false, message: 'User not found.' };
 
   user.name = data.name;
   user.email = data.email;
   user.initials = (data.name.match(/\b\w/g) || []).join('').toUpperCase() || '??';
+  await writeUsersToFile(users);
 
   console.log(`User '${username}' profile updated in mock database.`);
   const { passwordHash, loginAttempts, isLocked, passwordLastChanged, ...userProfile } = user;
@@ -308,6 +339,7 @@ export const updateUserPassword = async (
     currentPass: string,
     newPass: string
 ): Promise<{ success: boolean; message: string }> => {
+    const users = await readUsersFromFile();
     const user = users[username];
     if (!user) return { success: false, message: "User not found." };
 
@@ -317,6 +349,7 @@ export const updateUserPassword = async (
 
     user.passwordHash = `${newPass}_hashed`; // MOCK HASHING
     user.passwordLastChanged = new Date().toISOString(); 
+    await writeUsersToFile(users);
 
     console.log(`User '${username}' password updated in mock database.`);
     return { success: true, message: "Password updated successfully." };
@@ -328,6 +361,7 @@ export const updateUserPassword = async (
 export const lockUserAccount = async (
   username: string
 ): Promise<{ success: boolean; message: string }> => {
+  const users = await readUsersFromFile();
   const user = users[username];
   if (!user) return { success: false, message: 'User not found.' };
   // [SECURITY] Admin Backdoor Removal
@@ -336,6 +370,7 @@ export const lockUserAccount = async (
   if (user.role === 'admin') return { success: false, message: 'Admin accounts cannot be locked.' };
 
   user.isLocked = true;
+  await writeUsersToFile(users);
   console.log(`User account for '${username}' has been manually locked.`);
   return { success: true, message: 'User account locked successfully.' };
 };
@@ -346,12 +381,14 @@ export const lockUserAccount = async (
 export const unlockUserAccount = async (
   username: string
 ): Promise<{ success: boolean; message: string }> => {
+  const users = await readUsersFromFile();
   const user = users[username];
   if (!user) return { success: false, message: 'User not found.' };
   if (user.role === 'admin') return { success: false, message: 'Admin accounts cannot be locked.' };
 
   user.isLocked = false;
   user.loginAttempts = 0; 
+  await writeUsersToFile(users);
   console.log(`User account for '${username}' has been unlocked.`);
   return { success: true, message: 'User account unlocked successfully.' };
 };
@@ -363,13 +400,14 @@ export const unlockUserAccount = async (
 export const removeUser = async (
     username: string
 ): Promise<{ success: boolean; message: string }> => {
+    const users = await readUsersFromFile();
     const user = users[username];
     if (!user) return { success: false, message: "User not found." };
     if (user.role === 'admin') return { success: false, message: "Cannot remove an admin account." };
 
     delete users[username];
+    await writeUsersToFile(users);
     console.log(`User '${username}' removed from mock database.`);
     return { success: true, message: "User removed successfully." };
 };
-
     

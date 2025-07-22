@@ -46,10 +46,7 @@ export default function DashboardPage() {
   
   const [isDataLoaded, setIsDataLoaded] = useState(false);
   const [isAddProjectOpen, setIsAddProjectOpen] = useState(false);
-  
-  // The state for the "Add User" dialog is now managed internally by the Dialog component.
-  // We only need a key to re-render the AddUserForm and its parent Dialog to reset its state if needed.
-  const [addUserFormKey, setAddUserFormKey] = useState(Date.now());
+  const [isAddUserDialogOpen, setIsAddUserDialogOpen] = useState(false);
 
   const [assignTeamProjectId, setAssignTeamProjectId] = useState<number | null>(null);
 
@@ -167,12 +164,10 @@ export default function DashboardPage() {
   /**
    * Callback function for when a new user is successfully added.
    * This is the critical fix: It triggers `loadData` to refetch the user list
-   * from the "server" and updates a key for the AddUserForm to ensure the
-   * component fully re-renders with a clean state.
+   * from the "server" and closes the "Add User" dialog.
    */
   const handleUserAdded = () => {
-    // Changing the key will unmount the old AddUserForm and mount a new one.
-    setAddUserFormKey(Date.now());
+    setIsAddUserDialogOpen(false);
     // Refetch the user data to ensure the UI is up-to-date with the new user.
     loadData();
   };
@@ -307,7 +302,7 @@ export default function DashboardPage() {
         {/* Admin-only controls for adding users and projects */}
         {user?.role === 'admin' && (
             <div className="flex gap-2">
-                 <Dialog>
+                 <Dialog open={isAddUserDialogOpen} onOpenChange={setIsAddUserDialogOpen}>
                     <DialogTrigger asChild>
                         <Button variant="secondary"><Users className="mr-2"/> Manage Users</Button>
                     </DialogTrigger>
@@ -317,7 +312,7 @@ export default function DashboardPage() {
                             <DialogDescription>Create an account for a new Project Lead or Developer.</DialogDescription>
                         </DialogHeader>
                         {/* We pass a `key` to the form to force it to re-mount with a clean state after a successful submission. */}
-                        <AddUserForm key={addUserFormKey} onSuccess={handleUserAdded} />
+                        <AddUserForm onSuccess={handleUserAdded} />
                     </DialogContent>
                  </Dialog>
                  <Dialog open={isAddProjectOpen} onOpenChange={setIsAddProjectOpen}>

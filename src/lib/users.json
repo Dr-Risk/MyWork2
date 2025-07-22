@@ -1,0 +1,14 @@
+
+{
+  "moqadri": {
+    "username": "moqadri",
+    "passwordHash": "DefaultPassword123_hashed",
+    "role": "admin",
+    "name": "Mo Qadri",
+    "initials": "MQ",
+    "email": "mo.qadri@example.com",
+    "loginAttempts": 0,
+    "isLocked": false,
+    "passwordLastChanged": "2024-05-23T12:00:00.000Z"
+  }
+}
