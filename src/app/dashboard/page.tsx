@@ -268,7 +268,7 @@ export default function DashboardPage() {
                     {projectDocs.map(doc => (
                         <li key={doc.id} className="text-sm flex items-center">
                             <FileText className="h-4 w-4 mr-2 text-muted-foreground" />
-                            <a href={doc.url} target="_blank" rel="noopener noreferrer" className="hover:underline">{doc.name}</a>
+                            <a href={doc.url} target="_blank" rel="noopener noreferrer" className="hover:underline" download={doc.name}>{doc.name}</a>
                         </li>
                     ))}
                 </ul>
