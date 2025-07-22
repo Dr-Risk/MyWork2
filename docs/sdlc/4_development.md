@@ -9,7 +9,7 @@ The development process adhered to several key secure coding practices to minimi
 - **Input Validation**: All data received from the client is untrusted. The mock backend in `src/lib/auth.ts` uses **Zod schemas** to perform strict server-side validation. This is the authoritative source of validation and protects against injection attacks (OWASP A03) and other malformed data submissions. Client-side validation is also used for better UX but is not relied upon for security.
 - **Strong Typing**: The project is developed using **TypeScript**. This helps prevent a wide range of common JavaScript errors, such as type coercion bugs, null pointer exceptions, and undefined properties, which can sometimes lead to security vulnerabilities.
 - **Error Handling**: The application avoids leaking sensitive information in error messages. Generic error messages are sent to the client (e.g., "Invalid username or password"), while detailed error information is logged to the console (simulating server-side logs) for debugging purposes.
-- **Separation of Concerns**: The codebase is logically separated. UI components are distinct from business logic (`/lib`) and global state (`/context`). This makes the code easier to review for security flaws and maintain over time.
+- **Separation of Concerns**: The codebase is logically separated. UI components (`/components`) are distinct from business logic (`/lib`) and global state (`/context`). This makes the code easier to review for security flaws and maintain over time.
 
 ## 4.2 Use of Trusted Sources
 
@@ -28,14 +28,17 @@ The primary source code was developed manually, adhering to the designs laid out
 
 ## 4.4 Testing During Development
 
-Testing was an integral part of the development process, not a separate phase.
+Testing was an integral part of the development process, not a separate phase. This approach ensures that issues are caught early, reducing the cost and complexity of fixing them.
 
-- **Static Testing / Code Review**:
-    - The use of TypeScript and ESLint provides continuous static analysis, catching potential issues as the code is written.
-    - A manual code review process was simulated, focusing on key security files like `src/lib/auth.ts` to ensure that authorization checks were correctly implemented for every sensitive action. This process is documented in the `TROUBLESHOOTING.md` file.
+- **Static Testing (SAST) / Code Review**:
+    - The use of TypeScript and ESLint provides continuous **Static Application Security Testing (SAST)**, catching potential issues like type errors and unused variables as the code is written.
+    - A manual code review process was simulated, focusing on key security files like `src/lib/auth.ts` to ensure that authorization checks were correctly implemented for every sensitive action. This process successfully identified several critical vulnerabilities, such as a developer backdoor that allowed the admin account to bypass lockout mechanisms. The discovery and remediation of these issues are thoroughly documented in the `TROUBLESHOOTING.md` file.
+
 - **Unit Testing (Conceptual)**:
-    - While formal unit test files were not created for this prototype, the concept was applied by developing functions in isolation and testing them individually. For example, the `checkCredentials` function was tested with various inputs (valid user, invalid user, locked user) to ensure it returned the correct `AuthResponse` in each case.
+    - While formal unit test files were not created for this prototype, the concept was applied by developing functions in isolation and testing them individually. For example, the `checkCredentials` function in `src/lib/auth.ts` was manually tested with various inputs (valid user, invalid user, locked user) to ensure it returned the correct `AuthResponse` in each case before it was integrated into the login form.
+
 - **Integration Testing (Manual)**:
-    - After developing new features, manual integration tests were performed to ensure they worked with the existing system. For example, after creating the "Add User" form, testing was done to confirm that the new user immediately appeared in the "Assign Project Lead" dropdown on the dashboard, which involved verifying the interaction between the form component, the auth context, the backend API, and the dashboard page. This is documented in the `TROUBLESHOOTING.md`.
+    - After developing new features, manual integration tests were performed to ensure they worked correctly with the existing system. A critical issue was discovered during this process: after an admin created a new user, that user would not appear in the "Project Lead" dropdown list. This was an **integration bug** between the `AddUserForm` component, the `auth-context`, the mock backend API, and the `dashboard` page. The issue was traced to a state management flaw and was fixed by implementing a callback function. This is documented in `TROUBLESHOOTING.md` under "Stale User Data in 'Add Project' Form".
+
 - **System Testing (Manual)**:
-    - The application was tested as a whole from the perspective of each user role (`admin`, `project-lead`, `developer`). This involved logging in as each role and navigating through the entire application to ensure that all features worked as expected and that permissions were correctly enforced at a system level.
+    - Before any major change was considered "complete," the application was tested as a whole from the perspective of each user role (`admin`, `project-lead`, `developer`). This involved logging in as each role and navigating through the entire application to ensure that all features worked as expected and that permissions were correctly enforced at a system level, confirming that changes for one role did not negatively impact another.
