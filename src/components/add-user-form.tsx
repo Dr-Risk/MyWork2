@@ -45,8 +45,11 @@ const formSchema = z.object({
 });
 
 type AddUserFormProps = {
-  // A callback function to be executed when a user is successfully created.
-  // This is used to trigger a data refresh in the parent component.
+  /**
+   * A callback function to be executed when a user is successfully created.
+   * This is used to trigger a data refresh in the parent component and reset the form.
+   * It is essential for ensuring the UI reflects the new state immediately.
+   */
   onSuccess: () => void;
 };
 
@@ -80,8 +83,9 @@ export function AddUserForm({ onSuccess }: AddUserFormProps) {
           title: "User Created",
           description: `User '${values.username}' was created successfully.`,
         });
-        onSuccess(); // Trigger the success callback.
-        form.reset(); // Clear the form fields.
+        // Trigger the success callback provided by the parent component.
+        // This is the key to synchronizing the state between this form and the dashboard.
+        onSuccess();
       } else {
         // If the server returns an error (e.g., username exists), show it.
         toast({

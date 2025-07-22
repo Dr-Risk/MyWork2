@@ -67,7 +67,7 @@ This was a classic client-side state management issue. The main dashboard compon
 **Final Solution**: A callback function (`onSuccess`) was passed as a prop from the dashboard page to the `AddUserForm` component. When a user is created successfully, this callback is triggered. The callback function on the dashboard page then calls the `loadData` function, which re-fetches the list of all users from the server. This ensures the user list is always up-to-date, and any newly created users appear immediately in the "Project Lead" dropdown.
 
 ### Testing Strategy
--   **Manual UAT**:
+-   **Manual UAT (User Acceptance Testing)**:
     1.  Navigated to the "Manage Users" dialog and created a new user with the "Project Lead" role.
     2.  Closed the dialog and immediately opened the "Add Project" dialog.
     3.  **Outcome**: Verified that the newly created user appeared in the "Project Lead" dropdown list without requiring a page refresh. The fix was confirmed to be successful.

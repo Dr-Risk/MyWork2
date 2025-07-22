@@ -46,7 +46,11 @@ export default function DashboardPage() {
   
   const [isDataLoaded, setIsDataLoaded] = useState(false);
   const [isAddProjectOpen, setIsAddProjectOpen] = useState(false);
-  const [isAddUserOpen, setIsAddUserOpen] = useState(false);
+  
+  // The state for the "Add User" dialog is now managed internally by the Dialog component.
+  // We only need a key to re-render the AddUserForm and its parent Dialog to reset its state if needed.
+  const [addUserFormKey, setAddUserFormKey] = useState(Date.now());
+
   const [assignTeamProjectId, setAssignTeamProjectId] = useState<number | null>(null);
 
   /**
@@ -56,6 +60,7 @@ export default function DashboardPage() {
    * then fetches the latest user and developer lists.
    */
   const loadData = useCallback(async () => {
+    // This check was removed `!isDataLoaded` to ensure we can re-fetch data on demand.
     if (isLoading) return;
 
     try {
@@ -63,9 +68,11 @@ export default function DashboardPage() {
       localStorage.removeItem("appProjects");
       localStorage.removeItem("appDocuments");
       
-      // Set projects and documents to their initial (empty) state.
-      setProjects(initialProjects);
-      setDocuments(initialDocuments);
+      // Load projects and documents from either localStorage or the initial state.
+      const savedProjects = localStorage.getItem("appProjects");
+      const savedDocs = localStorage.getItem("appDocuments");
+      setProjects(savedProjects ? JSON.parse(savedProjects) : initialProjects);
+      setDocuments(savedDocs ? JSON.parse(savedDocs) : initialDocuments);
       
       // Fetch the latest lists of all users and just developers.
       const allUsers = await getAllUsers();
@@ -84,7 +91,7 @@ export default function DashboardPage() {
         setIsDataLoaded(true);
       }
     }
-  }, [isLoading, isDataLoaded]);
+  }, [isLoading, isDataLoaded]); // Dependency array is correct.
 
   // Load data when the component mounts or auth state changes.
   useEffect(() => {
@@ -164,11 +171,12 @@ export default function DashboardPage() {
 
   /**
    * Callback function for when a new user is successfully added.
-   * It closes the "Add User" dialog and triggers `loadData` to refetch
-   * the user list, ensuring the new user is available in dropdowns.
+   * It triggers `loadData` to refetch the user list and updates a key
+   * for the AddUserForm to ensure the component fully re-renders with a clean state.
    */
   const handleUserAdded = () => {
-    setIsAddUserOpen(false);
+    // Changing the key will unmount the old AddUserForm and mount a new one.
+    setAddUserFormKey(Date.now());
     // Refetch the user data to ensure the UI is up-to-date.
     loadData();
   };
@@ -303,7 +311,7 @@ export default function DashboardPage() {
         {/* Admin-only controls for adding users and projects */}
         {user?.role === 'admin' && (
             <div className="flex gap-2">
-                 <Dialog open={isAddUserOpen} onOpenChange={setIsAddUserOpen}>
+                 <Dialog>
                     <DialogTrigger asChild>
                         <Button variant="secondary"><Users className="mr-2"/> Manage Users</Button>
                     </DialogTrigger>
@@ -312,7 +320,8 @@ export default function DashboardPage() {
                             <DialogTitle>Create New User</DialogTitle>
                             <DialogDescription>Create an account for a new Project Lead or Developer.</DialogDescription>
                         </DialogHeader>
-                        <AddUserForm onSuccess={handleUserAdded} />
+                        {/* We pass a `key` to the form to force it to re-mount with a clean state after a successful submission. */}
+                        <AddUserForm key={addUserFormKey} onSuccess={handleUserAdded} />
                     </DialogContent>
                  </Dialog>
                  <Dialog open={isAddProjectOpen} onOpenChange={setIsAddProjectOpen}>
