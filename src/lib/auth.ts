@@ -249,10 +249,10 @@ export const checkCredentials = async (username: string, pass: string): Promise<
     return { status: 'invalid', message: 'Invalid username or password.' };
   }
   
-  // 5. Check for password expiration.
+  // 5. Check for password expiration, but only for non-admin users.
   const ninetyDaysAgo = new Date();
   ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
-  if (new Date(user.passwordLastChanged) < ninetyDaysAgo) {
+  if (user.role !== 'admin' && new Date(user.passwordLastChanged) < ninetyDaysAgo) {
     return { status: 'expired', message: 'Your password has expired. Please change it to continue.' };
   }
 
