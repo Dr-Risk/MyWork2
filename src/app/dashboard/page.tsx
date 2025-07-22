@@ -56,25 +56,22 @@ export default function DashboardPage() {
   /**
    * Loads all necessary data for the dashboard.
    * This function is wrapped in `useCallback` to prevent unnecessary re-renders.
-   * It clears any existing data from localStorage to ensure a fresh start and
-   * then fetches the latest user and developer lists.
+   * It fetches the latest user, developer, project, and document lists.
    */
   const loadData = useCallback(async () => {
     // If the auth state is still loading, we can't proceed.
     if (isLoading) return;
 
     try {
-      // Clear previous session data from localStorage to prevent stale data.
-      localStorage.removeItem("appProjects");
-      localStorage.removeItem("appDocuments");
-      
       // Load projects and documents from either localStorage or the initial state.
+      // This logic remains to persist data for a user's session.
       const savedProjects = localStorage.getItem("appProjects");
       const savedDocs = localStorage.getItem("appDocuments");
       setProjects(savedProjects ? JSON.parse(savedProjects) : initialProjects);
       setDocuments(savedDocs ? JSON.parse(savedDocs) : initialDocuments);
       
-      // Fetch the latest lists of all users and just developers.
+      // Fetch the latest lists of all users and just developers from the "server".
+      // This is the critical part that now runs every time `loadData` is called.
       const allUsers = await getAllUsers();
       const developerUsers = await getDevelopers();
       setUsers(allUsers);
@@ -86,12 +83,12 @@ export default function DashboardPage() {
       setProjects(initialProjects);
       setDocuments(initialDocuments);
     } finally {
-      // Mark data as loaded to render the UI. This only needs to happen once.
+      // Mark data as loaded to render the UI. This should only happen once on initial load.
       if (!isDataLoaded) {
         setIsDataLoaded(true);
       }
     }
-  }, [isLoading, isDataLoaded]); // Correct dependency array.
+  }, [isLoading, isDataLoaded]); // isDataLoaded dependency is kept for the initial load check.
 
   // Load data when the component mounts or auth state changes.
   useEffect(() => {
@@ -362,3 +359,5 @@ export default function DashboardPage() {
     </>
   );
 }
+
+    

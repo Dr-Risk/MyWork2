@@ -59,15 +59,20 @@ A series of security audits identified several vulnerabilities related to authen
 ## Issue: Stale User Data in "Add Project" Form (Solved)
 
 ### Description
-When an admin created a new user, that new user would not immediately appear in the "Project Lead" dropdown list when creating a new project. The admin had to manually refresh the page for the list to update.
+When an admin created a new user, that new user would not immediately appear in the "Project Lead" dropdown list when creating a new project. The admin had to manually refresh the page for the list to update. This was a persistent issue that required multiple fixes.
 
 ### Root Cause Analysis & Fixes
-This was a classic client-side state management issue. The main dashboard component fetched the list of users when it first loaded, but it was not aware that the user list had changed after a new user was created in the `AddUserForm` dialog. The form's success state was not communicated back to the parent dashboard page.
+This was a classic client-side state management issue, compounded by a subtle logic error.
+1. **Initial Misdiagnosis:** The problem was first thought to be a simple failure to trigger a re-render.
+2. **Backend Caching Flaw:** Further investigation revealed the mock backend in `auth.ts` was holding onto a stale, in-memory list of users, which was corrected.
+3. **Final Root Cause:** The ultimate bug was a logic error in the dashboard's `loadData` function (`src/app/dashboard/page.tsx`). A conditional check `if (!isDataLoaded)` was incorrectly preventing the function from *ever* re-fetching users after the initial page load, making all other fixes ineffective.
 
-**Final Solution**: A callback function (`onSuccess`) was passed as a prop from the dashboard page to the `AddUserForm` component. When a user is created successfully, this callback is triggered. The callback function on the dashboard page then calls the `loadData` function, which re-fetches the list of all users from the server. This ensures the user list is always up-to-date, and any newly created users appear immediately in the "Project Lead" dropdown.
+**Final Solution**: The flawed conditional check was removed from the `loadData` function. A callback function (`onSuccess`) is passed from the dashboard page to the `AddUserForm`. When a user is successfully created, this callback is triggered, which calls the corrected `loadData` function. This now guarantees that a fresh list of users is fetched from the server every time, ensuring the user list is always up-to-date.
 
 ### Testing Strategy
 -   **Manual UAT (User Acceptance Testing)**:
     1.  Navigated to the "Manage Users" dialog and created a new user with the "Project Lead" role.
     2.  Closed the dialog and immediately opened the "Add Project" dialog.
     3.  **Outcome**: Verified that the newly created user appeared in the "Project Lead" dropdown list without requiring a page refresh. The fix was confirmed to be successful.
+
+    
