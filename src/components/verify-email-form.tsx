@@ -32,11 +32,12 @@ import { Loader2, Send } from "lucide-react";
  * 
  * @description
  * This component provides a form for users to enter a 6-digit verification code
- * to complete their account registration. For this demo, it validates against a
- * hardcoded value.
+ * to complete their account registration. In a real application, this code would
+ * be sent to the user's email. For this demonstration, it simply validates against a
+ * hardcoded value ("123456").
  */
 
-// Zod schema to validate that the input is a 6-digit string.
+// Zod schema to validate that the input is a string exactly 6 digits long.
 const formSchema = z.object({
   code: z.string().length(6, { message: "Verification code must be 6 digits." }),
 });
@@ -55,11 +56,13 @@ export function VerifyEmailForm() {
     },
   });
 
-  // Simulates resending a verification code.
+  /**
+   * Simulates resending a verification code. In a real app, this would trigger
+   * a backend service to send a new email.
+   */
   async function handleSendCode() {
     setIsSendingCode(true);
-    // Simulate an API call.
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    await new Promise((resolve) => setTimeout(resolve, 1000)); // Simulate API call
     setIsSendingCode(false);
     toast({
       title: "Code 'Resent'",
@@ -67,10 +70,13 @@ export function VerifyEmailForm() {
     });
   }
 
-  // Handles the form submission and code verification.
+  /**
+   * Handles the form submission and code verification.
+   * @param {object} values - The validated form values.
+   */
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsVerifying(true);
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    await new Promise((resolve) => setTimeout(resolve, 1000)); // Simulate API call
     setIsVerifying(false);
 
     // Mock verification: checks if the entered code is the hardcoded "123456".
@@ -86,7 +92,8 @@ export function VerifyEmailForm() {
         title: "Verification Failed",
         description: "Invalid code. Please try again.",
       });
-      form.setError("code", { message: "Invalid code." }); // Display an error on the form field.
+      // Programmatically set an error on the form field for direct feedback.
+      form.setError("code", { message: "Invalid code." }); 
     }
   }
 
@@ -115,6 +122,7 @@ export function VerifyEmailForm() {
               )}
             />
             <div className="flex flex-col sm:flex-row gap-2">
+                {/* Button to resend the verification code */}
                 <Button
                     type="button"
                     variant="secondary"
@@ -129,6 +137,7 @@ export function VerifyEmailForm() {
                     )}
                     Resend Code
                 </Button>
+                {/* Button to submit the form and verify the code */}
                 <Button type="submit" className="w-full" disabled={isVerifying}>
                 {isVerifying && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Verify & Create Account

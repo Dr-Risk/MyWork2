@@ -34,26 +34,27 @@ import { useAuth } from "@/context/auth-context";
  * 
  * @description
  * This component handles the user login process. It provides a form for users
- * to enter their username and password, validates the input, and communicates
- * with the mock authentication backend (`/lib/auth.ts`) to verify credentials.
+ * to enter their username and password, validates the input using Zod, and
+ * communicates with the mock authentication backend (`/lib/auth.ts`) to verify
+ * credentials. It also handles various authentication responses like success,
+ * failure, and expired passwords.
  */
 
 /**
- * [SECURITY] This schema defines the validation rules for the login form fields
- * using Zod.
- * 
+ * [SECURITY] This Zod schema defines the validation rules for the login form fields.
+ * This client-side validation provides immediate feedback to the user and is the
+ * first line of defense. The primary, authoritative validation happens on the server
+ * in `src/lib/auth.ts`.
+ *
  * Input Validation (OWASP A03 - Injection):
- * - The regex below enforces a strict "allow-list" of characters for the username,
- *   preventing common injection characters like `'` or control characters. This is a
- *   first line of defense on the client-side. The primary defense is always the
- *   equivalent validation on the server-side, which is implemented in `src/lib/auth.ts`.
+ * - The regex `/^[a-zA-Z0-9_.-]+$/` enforces a strict "allow-list" of characters
+ *   for the username, preventing common injection characters like `'`, `=`, or `--`.
  *
  * NIST SP 800-63B on Passwords:
- * - The password validation focuses on a minimum length of 8 characters. It does NOT
- *   enforce character complexity (e.g., symbols, numbers) as this is no longer
- *   recommended. Allowing a wide range of characters, including symbols and spaces,
- *   encourages stronger, more memorable passphrases. The key security control is
- *   strong hashing on the server, not complex rules on the client.
+ * - The password validation requires a minimum length of 8 characters but does NOT
+ *   enforce complexity (e.g., symbols, numbers). Modern guidelines suggest that
+ *   length is a better indicator of strength than character complexity. The most
+ *   critical security control is strong, salted hashing on the server.
  */
 const formSchema = z.object({
   username: z.string()
@@ -70,7 +71,7 @@ export function LoginForm() {
   const [isLoading, setIsLoading] = useState(false);
   const { setUser } = useAuth(); // Get the setUser function from the auth context.
 
-  // Initialize the form with react-hook-form and Zod resolver.
+  // Initialize the form with react-hook-form and the Zod resolver for validation.
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -79,7 +80,10 @@ export function LoginForm() {
     },
   });
 
-  // This function is called when the form is submitted.
+  /**
+   * Handles the form submission after successful validation.
+   * @param {object} values - The validated form values.
+   */
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
     
@@ -119,8 +123,8 @@ export function LoginForm() {
       case 'invalid':
         /**
          * [SECURITY] User Enumeration Prevention (OWASP A07).
-         * Show a generic failure message for locked or invalid credentials
-         * to prevent an attacker from determining whether a username is valid or not.
+         * Show a generic failure message for both locked and invalid credentials
+         * to prevent an attacker from determining whether a username is valid.
          */
         toast({
           variant: "destructive",
@@ -153,9 +157,9 @@ export function LoginForm() {
                   </FormControl>
                   {/*
                     * [SECURITY] Cross-Site Scripting (XSS) Prevention
-                    * The error messages displayed by <FormMessage /> are derived from the
-                    * `formSchema`. They are static strings and do not contain user input,
-                    * making them safe from XSS. React would still escape them if they did.
+                    * The error messages displayed by <FormMessage /> are derived from static
+                    * strings in the `formSchema`. They do not contain user-generated content,
+                    * making them safe from XSS. React would still escape them as a defense-in-depth measure.
                     */}
                   <FormMessage />
                 </FormItem>

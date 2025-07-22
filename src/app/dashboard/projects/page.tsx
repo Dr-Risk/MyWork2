@@ -34,35 +34,46 @@ import {
 
 /**
  * @fileoverview All Projects Page for Administrators
- * @description This page displays a comprehensive list of all projects,
- * regardless of status or assignment. It is intended for admin use only.
+ * @description This page displays a comprehensive list of all projects in the system,
+ * regardless of their status or team assignment. It is intended for administrators only
+ * and includes actions like marking projects as complete or deleting them.
  */
 export default function AllProjectsPage() {
   const { user, isLoading: isAuthLoading } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
 
+  // State management for projects, documents, users, and loading status.
   const [projects, setProjects] = useState<Project[]>([]);
   const [documents, setDocuments] = useState<Document[]>([]);
   const [users, setUsers] = useState<SanitizedUser[]>([]);
   const [isDataLoaded, setIsDataLoaded] = useState(false);
 
-  // Route protection for admins
+  /**
+   * [SECURITY] Route Protection.
+   * This `useEffect` hook ensures that only users with the 'admin' role can access this page.
+   * If a non-admin user tries to navigate here, they will be redirected to the main dashboard.
+   */
   useEffect(() => {
     if (!isAuthLoading && user?.role !== 'admin') {
       router.replace('/dashboard');
     }
   }, [user, isAuthLoading, router]);
   
-  // Load data from localStorage or initial set
+  /**
+   * Loads all necessary data from the mock backend.
+   * It clears any existing data from localStorage to ensure the view is fresh
+   * and then fetches all projects, documents, and users.
+   */
   useEffect(() => {
     async function loadData() {
         if (isAuthLoading) return;
         try {
-            // Always start with a clean slate, ignoring localStorage for initial load.
+            // Always start with a clean slate by clearing localStorage.
             localStorage.removeItem("appProjects");
             localStorage.removeItem("appDocuments");
             
+            // Set data from the initial in-memory source.
             setProjects(initialProjects);
             setDocuments(initialDocuments);
             
@@ -79,23 +90,36 @@ export default function AllProjectsPage() {
     loadData();
   }, [isAuthLoading]);
 
-  // Persist data to localStorage when it changes
+  /**
+   * Persists project data to localStorage whenever it changes.
+   * This ensures that any modifications (like completing or deleting a project)
+   * are saved for the user's session.
+   */
   useEffect(() => {
     if (isDataLoaded) {
       localStorage.setItem("appProjects", JSON.stringify(projects));
     }
   }, [projects, isDataLoaded]);
 
+  /**
+   * Handles marking a project as "Completed".
+   */
   const handleCompleteProject = (projectId: number) => {
     setProjects(prev => prev.map(p => p.id === projectId ? { ...p, status: "Completed" } : p));
     toast({ title: "Project Updated", description: "Project marked as complete." });
   };
 
+  /**
+   * Handles permanently deleting a project.
+   */
   const handleDeleteProject = (projectId: number) => {
     setProjects(prev => prev.filter(p => p.id !== projectId));
     toast({ variant: "destructive", title: "Project Deleted", description: "The project has been permanently removed." });
   };
   
+  /**
+   * A reusable component to render a single project card with admin-specific actions.
+   */
   const ProjectCard = ({ project }: { project: Project }) => {
     const projectDocs = documents.filter(d => d.projectId === project.id);
     const assignedDevsList = users.filter(u => project.assignedDevelopers.includes(u.username));
@@ -145,11 +169,13 @@ export default function AllProjectsPage() {
           </div>
         </CardContent>
         <CardFooter>
+            {/* Show "Mark as Complete" button for active projects. */}
             {user?.role === 'admin' && project.status === 'Active' && (
                  <Button variant="default" onClick={() => handleCompleteProject(project.id)} className="w-full">
                     <CheckCircle2 className="mr-2"/> Mark as Complete
                 </Button>
             )}
+            {/* Show "Delete Project" button for completed projects. */}
              {user?.role === 'admin' && project.status === 'Completed' && (
                 <AlertDialog>
                     <AlertDialogTrigger asChild>
@@ -178,6 +204,7 @@ export default function AllProjectsPage() {
     );
   };
 
+  // Show a skeleton loader while authentication is in progress or if the user is not an admin.
   if (isAuthLoading || !isDataLoaded || user?.role !== 'admin') {
     return (
         <div className="space-y-4">
@@ -210,6 +237,7 @@ export default function AllProjectsPage() {
             <ProjectCard key={project.id} project={project} />
           ))
         ) : (
+          // Display a message if no projects exist in the system.
           <Card className="col-span-full flex flex-col items-center justify-center p-12">
             <Gamepad2 className="w-16 h-16 text-muted-foreground mb-4" />
             <CardTitle className="font-headline">No Projects Found</CardTitle>

@@ -22,19 +22,29 @@ interface AuthContextType {
   isLoading: boolean; // A flag to indicate if the initial session load is in progress.
 }
 
-// Create the context with an initial undefined value. This helps catch errors
-// if a component tries to use the context without being wrapped in the provider.
+/**
+ * The React Context object for authentication.
+ * It's initialized with `undefined` to help catch errors where the context is
+ * used outside of its provider.
+ */
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// The provider component that will wrap the application or parts of it.
+/**
+ * The provider component that wraps the application to make auth state available.
+ * @param {object} props - The component props.
+ * @param {React.ReactNode} props.children - The child components to be rendered within the provider.
+ */
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   // `useState` to hold the current user's profile.
   const [user, setUserState] = useState<UserProfile | null>(null);
-  // `useState` to track the loading state. It starts as true.
+  // `useState` to track the loading state. It starts as true before the initial check.
   const [isLoading, setIsLoading] = useState(true);
 
-  // This `useEffect` hook runs once on the client-side when the component mounts.
-  // Its purpose is to check for a persisted user session in localStorage.
+  /**
+   * This `useEffect` hook runs once on the client-side when the component mounts.
+   * Its purpose is to check for a persisted user session in localStorage and
+   * initialize the auth state.
+   */
   useEffect(() => {
     try {
       /**
@@ -68,9 +78,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
     // Set loading to false once the user has been loaded (or confirmed not to exist).
     setIsLoading(false);
-  }, []); // The empty dependency array `[]` ensures this effect runs only once.
+  }, []); // The empty dependency array `[]` ensures this effect runs only once on mount.
 
-  // This function wraps the state setter to also handle persistence.
+  /**
+   * A wrapper function for setting the user state that also handles persistence.
+   * @param {UserProfile | null} user - The user object to set, or null to log out.
+   */
   const setUser = (user: UserProfile | null) => {
     setUserState(user);
     if (user) {
@@ -82,8 +95,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // The `value` prop of the Provider makes the user state, setter function, and loading state
-  // available to all descendant components that use the `useAuth` hook.
+  /**
+   * The `value` prop of the Provider makes the user state, setter function, and loading state
+   * available to all descendant components that use the `useAuth` hook.
+   */
   return (
     <AuthContext.Provider value={{ user, setUser, isLoading }}>
       {children}
@@ -91,7 +106,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   );
 };
 
-// Custom hook to easily consume the authentication context in other components.
+/**
+ * Custom hook to easily consume the authentication context in other components.
+ * This abstracts away the `useContext` call and provides better error handling.
+ */
 export const useAuth = () => {
   const context = useContext(AuthContext);
   // If a component tries to use this hook outside of an AuthProvider,

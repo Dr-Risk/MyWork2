@@ -20,6 +20,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import type { SanitizedUser } from "@/lib/auth";
 import type { Project } from "@/lib/projects";
 
+/**
+ * @fileoverview Add Project Form Component
+ * @description This component provides a form for Admins to create new projects.
+ * It includes fields for project name, description, deadline, and assigning a project lead.
+ */
+
+// Zod schema for validating the new project form data.
 const formSchema = z.object({
   name: z.string().min(3, "Project name must be at least 3 characters."),
   description: z.string().min(10, "Description is required."),
@@ -28,11 +35,13 @@ const formSchema = z.object({
 });
 
 type AddProjectFormProps = {
-  projectLeads: SanitizedUser[];
+  projectLeads: SanitizedUser[]; // An array of users who can be assigned as leads.
+  // Callback function to execute when the form is successfully submitted.
   onSubmit: (data: Omit<Project, 'id' | 'status' | 'assignedDevelopers'>) => void;
 };
 
 export function AddProjectForm({ projectLeads, onSubmit }: AddProjectFormProps) {
+  // Initialize react-hook-form with the Zod resolver.
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -43,6 +52,11 @@ export function AddProjectForm({ projectLeads, onSubmit }: AddProjectFormProps) 
     },
   });
 
+  /**
+   * The submit handler for the form.
+   * It calls the `onSubmit` prop passed from the parent component with the validated form data.
+   * @param {object} values - The validated form values.
+   */
   function handleSubmit(values: z.infer<typeof formSchema>) {
     onSubmit({
         ...values,
@@ -91,6 +105,7 @@ export function AddProjectForm({ projectLeads, onSubmit }: AddProjectFormProps) 
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
+                  {/* Populate the dropdown with the list of available project leads */}
                   {projectLeads.map(lead => (
                     <SelectItem key={lead.username} value={lead.username}>
                       {lead.name}

@@ -38,6 +38,7 @@ export default function DashboardPage() {
   const router = useRouter();
   const { toast } = useToast();
 
+  // State for managing projects, documents, users, and UI dialogs.
   const [projects, setProjects] = useState<Project[]>([]);
   const [documents, setDocuments] = useState<Document[]>([]);
   const [users, setUsers] = useState<SanitizedUser[]>([]);
@@ -48,18 +49,25 @@ export default function DashboardPage() {
   const [isAddUserOpen, setIsAddUserOpen] = useState(false);
   const [assignTeamProjectId, setAssignTeamProjectId] = useState<number | null>(null);
 
-  // Load initial data
+  /**
+   * Loads all necessary data for the dashboard.
+   * This function is wrapped in `useCallback` to prevent unnecessary re-renders.
+   * It clears any existing data from localStorage to ensure a fresh start and
+   * then fetches the latest user and developer lists.
+   */
   const loadData = useCallback(async () => {
     if (isLoading) return;
 
     try {
-      // Always start with a clean slate, ignoring localStorage for initial load.
+      // Clear previous session data from localStorage to prevent stale data.
       localStorage.removeItem("appProjects");
       localStorage.removeItem("appDocuments");
       
+      // Set projects and documents to their initial (empty) state.
       setProjects(initialProjects);
       setDocuments(initialDocuments);
       
+      // Fetch the latest lists of all users and just developers.
       const allUsers = await getAllUsers();
       const developerUsers = await getDevelopers();
       setUsers(allUsers);
@@ -67,21 +75,28 @@ export default function DashboardPage() {
 
     } catch (error) {
       console.error("Failed to load data, falling back to initial set.", error);
+      // Fallback to initial data in case of an error.
       setProjects(initialProjects);
       setDocuments(initialDocuments);
     } finally {
+      // Mark data as loaded to render the UI.
       if (!isDataLoaded) {
         setIsDataLoaded(true);
       }
     }
   }, [isLoading, isDataLoaded]);
 
+  // Load data when the component mounts or auth state changes.
   useEffect(() => {
     loadData();
   }, [loadData]);
 
 
-  // Persist data to localStorage
+  /**
+   * Persists the current state of projects and documents to localStorage.
+   * This `useEffect` hook runs whenever the `projects` or `documents` state changes,
+   * ensuring that the user's data is saved across browser sessions.
+   */
   useEffect(() => {
     if (isDataLoaded) {
       localStorage.setItem("appProjects", JSON.stringify(projects));
@@ -89,6 +104,11 @@ export default function DashboardPage() {
     }
   }, [projects, documents, isDataLoaded]);
 
+  /**
+   * Handles adding a new project to the state.
+   * It creates a new project object with a unique ID and "Active" status,
+   * closes the "Add Project" dialog, and shows a success toast.
+   */
   const handleAddProject = (newProject: Omit<Project, 'id' | 'status'>) => {
     setProjects(prev => [
       { ...newProject, id: Date.now(), status: "Active" },
@@ -98,43 +118,65 @@ export default function DashboardPage() {
     toast({ title: "Project Created", description: `"${newProject.name}" has been added.` });
   };
   
+  /**
+   * Handles marking a project as "Completed".
+   * It finds the project by its ID and updates its status.
+   */
   const handleCompleteProject = (projectId: number) => {
     setProjects(prev => prev.map(p => p.id === projectId ? { ...p, status: "Completed" } : p));
     toast({ title: "Project Updated", description: "Project marked as complete." });
   };
 
+  /**
+   * Handles assigning developers to a project.
+   * It updates the project's `assignedDevelopers` array, ensuring no duplicates,
+   * closes the dialog, and shows a success toast.
+   */
   const handleAssignTeam = (projectId: number, assignedUsernames: string[]) => {
      setProjects(prev => prev.map(p => {
         if (p.id === projectId) {
-            // Get current developers and add new ones, avoiding duplicates
+            // Use a Set to efficiently merge new and existing developers, avoiding duplicates.
             const currentDevs = new Set(p.assignedDevelopers);
             assignedUsernames.forEach(username => currentDevs.add(username));
             return { ...p, assignedDevelopers: Array.from(currentDevs) };
         }
         return p;
     }));
-    setAssignTeamProjectId(null);
+    setAssignTeamProjectId(null); // Close the dialog.
     toast({ title: "Team Updated", description: "Developers have been assigned to the project." });
   };
 
+  /**
+   * Handles uploading a file and associating it with a project.
+   * In this mock implementation, it creates a new document object without
+   * actually uploading the file to a server.
+   */
   const handleFileUpload = (projectId: number, file: File) => {
     const newDocument: Document = {
       id: Date.now(),
       name: file.name,
-      url: "#", // In a real app, upload and get URL
+      url: "#", // In a real app, this URL would come from a file storage service.
       projectId,
     };
     setDocuments(prev => [newDocument, ...prev]);
     toast({ title: "File Uploaded", description: `"${file.name}" has been added to the project.` });
   };
 
+  /**
+   * Callback function for when a new user is successfully added.
+   * It closes the "Add User" dialog and triggers `loadData` to refetch
+   * the user list, ensuring the new user is available in dropdowns.
+   */
   const handleUserAdded = () => {
     setIsAddUserOpen(false);
-    // Refetch the user data to ensure the new user appears in dropdowns.
+    // Refetch the user data to ensure the UI is up-to-date.
     loadData();
   };
 
-
+  /**
+   * A reusable component to render a single project card.
+   * It displays project details and actions based on the current user's role.
+   */
   const ProjectCard = ({ project }: { project: Project }) => {
     const projectDocs = documents.filter(d => d.projectId === project.id);
     const assignedDevsList = users.filter(u => project.assignedDevelopers.includes(u.username));
@@ -184,6 +226,7 @@ export default function DashboardPage() {
           </div>
         </CardContent>
         <CardFooter className="grid grid-cols-2 gap-2">
+            {/* Conditional rendering for Project Lead actions */}
             {user?.role === 'project-lead' && user.username === project.lead && (
                 <>
                     <Dialog open={assignTeamProjectId === project.id} onOpenChange={(isOpen) => setAssignTeamProjectId(isOpen ? project.id : null)}>
@@ -196,6 +239,7 @@ export default function DashboardPage() {
                               <DialogDescription>Select developers to add to this project.</DialogDescription>
                           </DialogHeader>
                           <AssignTeamForm 
+                            // Filter out developers who are already assigned.
                             developers={developers.filter(d => !project.assignedDevelopers.includes(d.username))} 
                             onSubmit={(devs) => handleAssignTeam(project.id, devs)}
                           />
@@ -208,6 +252,7 @@ export default function DashboardPage() {
                     <input type="file" id={`file-upload-${project.id}`} className="hidden" onChange={(e) => e.target.files && handleFileUpload(project.id, e.target.files[0])}/>
                 </>
             )}
+            {/* Conditional rendering for Admin actions */}
             {user?.role === 'admin' && project.status === 'Active' && (
                  <Button variant="default" onClick={() => handleCompleteProject(project.id)} className="col-span-2">
                     <CheckCircle2 className="mr-2"/> Mark as Complete
@@ -218,20 +263,26 @@ export default function DashboardPage() {
     );
   };
 
+  /**
+   * Filters the list of projects based on the current user's role and assignments.
+   */
   const getVisibleProjects = () => {
     if (!user) return [];
     switch (user.role) {
       case 'admin':
-        return projects;
+        return projects; // Admins see all projects.
       case 'project-lead':
+        // Project Leads see projects they lead or are assigned to as a developer.
         return projects.filter(p => p.lead === user.username || p.assignedDevelopers.includes(user.username));
       case 'developer':
+        // Developers only see projects they are assigned to.
         return projects.filter(p => p.assignedDevelopers.includes(user.username));
       default:
         return [];
     }
   };
 
+  // While data is loading, show a skeleton UI.
   if (isLoading || !isDataLoaded) {
     return <Skeleton className="h-64 w-full" />;
   }
@@ -249,6 +300,7 @@ export default function DashboardPage() {
             Welcome, {user?.name}. Here are the projects you have access to.
           </p>
         </div>
+        {/* Admin-only controls for adding users and projects */}
         {user?.role === 'admin' && (
             <div className="flex gap-2">
                  <Dialog open={isAddUserOpen} onOpenChange={setIsAddUserOpen}>
@@ -272,7 +324,11 @@ export default function DashboardPage() {
                             <DialogTitle>Create a new project</DialogTitle>
                             <DialogDescription>Fill in the details for the new game project.</DialogDescription>
                         </DialogHeader>
-                        <AddProjectForm projectLeads={users.filter(u => u.role === 'project-lead' || u.role === 'admin')} onSubmit={handleAddProject} />
+                        <AddProjectForm 
+                          // Pass the list of potential leads to the form.
+                          projectLeads={users.filter(u => u.role === 'project-lead' || u.role === 'admin')} 
+                          onSubmit={handleAddProject} 
+                        />
                     </DialogContent>
                  </Dialog>
             </div>
@@ -285,6 +341,7 @@ export default function DashboardPage() {
             <ProjectCard key={project.id} project={project} />
           ))
         ) : (
+          // Display a message when there are no projects to show.
           <Card className="col-span-full flex flex-col items-center justify-center p-12">
             <Gamepad2 className="w-16 h-16 text-muted-foreground mb-4" />
             <CardTitle className="font-headline">No Projects Found</CardTitle>

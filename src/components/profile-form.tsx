@@ -27,13 +27,16 @@ import { updateUserProfile } from "@/lib/auth";
  * 
  * @description
  * This component provides a form for users to update their public profile
- * information, such as their name and email address. It fetches the current
- * user's data from the `AuthContext` to pre-populate the form.
+ * information, specifically their full name and email address. It fetches the
+ * current user's data from the `useAuth` hook to pre-populate the form fields.
  */
 
-// [SECURITY] Zod schema for validating the profile update data.
-// Even though this is a profile update form, server-side validation is still
-// essential to prevent malicious data from being saved to the database.
+/**
+ * [SECURITY] Zod schema for validating the profile update data.
+ * Even though this is a profile update form for an authenticated user, server-side
+ * validation (which is mocked in `lib/auth.ts`) is still essential to prevent
+ * malicious or malformed data from being saved to the database.
+ */
 const UpdateUserProfileSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters." }),
   email: z.string().email({ message: "Please enter a valid email address." }),
@@ -54,25 +57,33 @@ export function ProfileForm() {
     },
   });
 
-  // This function is called when the form is submitted and validated successfully.
+  /**
+   * Handles the form submission after successful validation.
+   * @param {object} values - The validated form values.
+   */
   async function onSubmit(values: z.infer<typeof UpdateUserProfileSchema>) {
     if (!user) return; // Guard clause in case user data is not available.
 
     setIsLoading(true);
-    // [SECURITY] The `updateUserProfile` function in `lib/auth.ts` simulates a
-    // secure, server-side endpoint. In a real application, this endpoint would
-    // verify that the logged-in user has permission to update this profile
-    // (either their own or, if an admin, someone else's).
+    /**
+     * [SECURITY] The `updateUserProfile` function in `lib/auth.ts` simulates a
+     * secure, server-side endpoint. In a real application, this endpoint would
+     * first verify that the logged-in user has permission to update this profile
+     * (i.e., they are updating their own profile, or they are an admin with
+     * the necessary privileges).
+     */
     const response = await updateUserProfile(user.username, values);
     setIsLoading(false);
 
     if (response.success && response.user) {
-      setUser(response.user); // Update the global auth context with the new user info.
+      // Update the global auth context with the new user info.
+      setUser(response.user); 
       toast({
         title: "Profile Updated",
         description: "Your profile information has been successfully updated.",
       });
-      router.refresh(); // Refresh the page to ensure all components have the latest user data.
+      // Refresh the page to ensure all components have the latest user data.
+      router.refresh(); 
     } else {
       toast({
         variant: "destructive",

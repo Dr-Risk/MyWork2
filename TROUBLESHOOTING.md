@@ -1,3 +1,4 @@
+
 # Troubleshooting & Quality Assurance Log
 
 This document tracks significant issues encountered during development, their resolution, and the testing strategies employed to ensure application quality and security.
@@ -15,12 +16,12 @@ A systematic rewrite was performed:
     *   The main dashboard (`src/app/dashboard/page.tsx`) was rebuilt to display a list of projects instead of tasks.
     *   Role-based functionality was implemented: Admins can add projects and manage users; Project Leads can assign developers and upload documents.
     *   New components like `AddProjectForm` and `AssignTeamForm` were created.
-4.  **Navigation**: The sidebar navigation (`src/components/sidebar-nav.tsx`) was updated to reflect the new application structure, removing irrelevant links (Blog, Events, etc.) and adding links to project and user management pages.
+4.  **Navigation**: The sidebar navigation (`src/components/sidebar-nav.tsx`) was updated to reflect the new application structure, removing irrelevant links and adding links to project and user management pages.
 5.  **Cleanup**: All irrelevant pages and components related to the old "MediTask" concept were removed to streamline the codebase.
 
 ### Testing Strategy
 -   **Manual UAT**: Performed comprehensive testing by logging in as each of the new roles (`admin`, `project-lead`, `developer`) and verifying that the UI and functionality correctly matched the specified permissions.
--   **Component Verification**: Manually tested new components like `AddProjectForm` to ensure they correctly updated the application's state and persisted data to `localStorage`.
+-   **Component Verification**: Manually tested new components like `AddProjectForm` to ensure they correctly updated the application's state and persisted data.
 
 ## Issue: Persistent Login Failures due to Stale Data (Solved)
 
@@ -54,3 +55,19 @@ A series of security audits identified several vulnerabilities related to authen
     -   Attempted to log in with invalid characters (e.g., `' OR 1=1 --`) to verify that the stricter validation rejects them.
     -   Intentionally failed login attempts for the admin user to confirm that the account lockout mechanism now applies correctly.
 -   **Code Review**: Performed a full review to ensure security comments were accurate and provided clear guidance.
+
+## Issue: Stale User Data in "Add Project" Form (Solved)
+
+### Description
+When an admin created a new user, that new user would not immediately appear in the "Project Lead" dropdown list when creating a new project. The admin had to manually refresh the page for the list to update.
+
+### Root Cause Analysis & Fixes
+This was a classic client-side state management issue. The main dashboard component fetched the list of users when it first loaded, but it was not aware that the user list had changed after a new user was created in the `AddUserForm` dialog. The form's success state was not communicated back to the parent dashboard page.
+
+**Final Solution**: A callback function (`onSuccess`) was passed as a prop from the dashboard page to the `AddUserForm` component. When a user is created successfully, this callback is triggered. The callback function on the dashboard page then calls the `loadData` function, which re-fetches the list of all users from the server. This ensures the user list is always up-to-date, and any newly created users appear immediately in the "Project Lead" dropdown.
+
+### Testing Strategy
+-   **Manual UAT**:
+    1.  Navigated to the "Manage Users" dialog and created a new user with the "Project Lead" role.
+    2.  Closed the dialog and immediately opened the "Add Project" dialog.
+    3.  **Outcome**: Verified that the newly created user appeared in the "Project Lead" dropdown list without requiring a page refresh. The fix was confirmed to be successful.

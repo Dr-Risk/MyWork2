@@ -29,17 +29,24 @@ import { createUser } from "@/lib/auth";
 
 /**
  * @fileoverview Add User Form Component
- * @description For Admins to create new users (Project Leads or Developers).
+ * @description This form is used by Admins to create new user accounts, such as
+ * Project Leads or Developers. It includes validation and handles the API call
+ * to the mock backend for user creation.
  */
+
+// Zod schema for validating the new user data.
 const formSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters." }),
   username: z.string().min(3, { message: "Username must be at least 3 characters." }),
   email: z.string().email({ message: "Please enter a valid email address." }),
   password: z.string().min(8, { message: "Password must be at least 8 characters." }),
+  // Role must be one of the two specified values.
   role: z.enum(["project-lead", "developer"]),
 });
 
 type AddUserFormProps = {
+  // A callback function to be executed when a user is successfully created.
+  // This is used to trigger a data refresh in the parent component.
   onSuccess: () => void;
 };
 
@@ -47,17 +54,23 @@ export function AddUserForm({ onSuccess }: AddUserFormProps) {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
+  // Initialize react-hook-form with the Zod resolver and default values.
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: "",
       username: "",
       email: "",
-      password: "DefaultPassword123",
+      password: "DefaultPassword123", // A default password for new users.
       role: "developer",
     },
   });
 
+  /**
+   * The submit handler for the form.
+   * It calls the `createUser` server action and handles the response.
+   * @param {object} values - The validated form values.
+   */
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
     try {
@@ -67,9 +80,10 @@ export function AddUserForm({ onSuccess }: AddUserFormProps) {
           title: "User Created",
           description: `User '${values.username}' was created successfully.`,
         });
-        onSuccess();
-        form.reset();
+        onSuccess(); // Trigger the success callback.
+        form.reset(); // Clear the form fields.
       } else {
+        // If the server returns an error (e.g., username exists), show it.
         toast({
           variant: "destructive",
           title: "Creation Failed",

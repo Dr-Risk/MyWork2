@@ -57,24 +57,33 @@ import {
  * @fileoverview User Management Page
  * @description This page is for Admins to view and manage all user accounts.
  * It provides controls for adding new users, changing roles, locking/unlocking accounts,
- * and removing users.
+ * and removing users. It is an admin-only feature.
  */
 export default function UsersPage() {
     const { user, isLoading: isAuthLoading } = useAuth();
     const router = useRouter();
 
+    // State management for the user list, loading status, and dialog visibility.
     const [users, setUsers] = useState<SanitizedUser[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isAddUserDialogOpen, setIsAddUserDialogOpen] = useState(false);
     const { toast } = useToast();
 
-    // Route protection
+    /**
+     * [SECURITY] Route Protection.
+     * Ensures only authenticated admin users can access this page.
+     * Non-admins are redirected to their dashboard.
+     */
     useEffect(() => {
         if (!isAuthLoading && user?.role !== 'admin') {
             router.replace('/dashboard');
         }
     }, [user, isAuthLoading, router]);
 
+    /**
+     * Fetches the list of all users from the mock backend.
+     * It sets the loading state while the data is being fetched.
+     */
     const fetchUsers = async () => {
         setIsLoading(true);
         try {
@@ -88,57 +97,76 @@ export default function UsersPage() {
         }
     };
 
+    // Fetch the user list when the component mounts, but only if the user is an admin.
     useEffect(() => {
         if (user?.role === 'admin') {
             fetchUsers();
         }
     }, [user]);
 
+    /**
+     * Handles changing a user's role.
+     * It calls the mock server function and refetches the user list on success.
+     */
     const handleRoleChange = async (username: string, newRole: 'project-lead' | 'developer') => {
         const response = await updateUserRole(username, newRole);
         if (response.success) {
             toast({ title: "Success", description: response.message });
-            fetchUsers();
+            fetchUsers(); // Refetch to show the updated role.
         } else {
             toast({ variant: "destructive", title: "Error", description: response.message });
         }
     };
     
+    /**
+     * Handles locking a user's account.
+     */
     const handleLockUser = async (username: string) => {
         const response = await lockUserAccount(username);
         if (response.success) {
             toast({ title: 'Success', description: response.message });
-            fetchUsers();
+            fetchUsers(); // Refetch to show the locked status.
         } else {
             toast({ variant: 'destructive', title: 'Error', description: response.message });
         }
     };
 
+    /**
+     * Handles unlocking a user's account.
+     */
     const handleUnlockUser = async (username: string) => {
         const response = await unlockUserAccount(username);
         if (response.success) {
             toast({ title: 'Success', description: response.message });
-            fetchUsers();
+            fetchUsers(); // Refetch to show the active status.
         } else {
             toast({ variant: 'destructive', title: 'Error', description: response.message });
         }
     };
 
+    /**
+     * Handles permanently removing a user from the system.
+     */
     const handleRemoveUser = async (username: string) => {
         const response = await removeUser(username);
         if (response.success) {
             toast({ title: 'User Removed', description: response.message });
-            fetchUsers();
+            fetchUsers(); // Refetch to remove the user from the list.
         } else {
             toast({ variant: 'destructive', title: 'Error', description: response.message });
         }
     };
 
+    /**
+     * Callback for when a new user is added successfully.
+     * It closes the dialog and refetches the user list.
+     */
     const handleUserAdded = () => {
         setIsAddUserDialogOpen(false);
         fetchUsers();
     };
     
+    // Display a skeleton loader while authenticating or if the user is not an admin.
     if (isAuthLoading || user?.role !== 'admin') {
         return <Skeleton className="h-96 w-full"/>;
     }
@@ -169,6 +197,7 @@ export default function UsersPage() {
       <Card className="mt-6">
         <CardContent className="pt-6">
             {isLoading ? (
+            // Show skeleton rows while fetching user data.
             <div className="space-y-2">
                 <Skeleton className="h-10 w-full" />
                 <Skeleton className="h-10 w-full" />
@@ -200,10 +229,12 @@ export default function UsersPage() {
                         )}
                         </TableCell>
                         <TableCell className="text-right">
+                        {/* Admin users cannot be modified. */}
                         {u.role === 'admin' ? (
                             <Badge>Admin</Badge>
                         ) : (
                             <div className="flex items-center justify-end gap-2">
+                            {/* Role selection dropdown */}
                             <Select
                                 defaultValue={u.role}
                                 onValueChange={(newRole: 'project-lead' | 'developer') => handleRoleChange(u.username, newRole)}
@@ -215,12 +246,14 @@ export default function UsersPage() {
                                 </SelectContent>
                             </Select>
 
+                            {/* Lock/Unlock button */}
                             {u.isLocked ? (
                                 <Button variant="outline" size="sm" onClick={() => handleUnlockUser(u.username)}><LockOpen className="mr-2 h-4 w-4" />Unlock</Button>
                             ) : (
                                 <Button variant="outline" size="sm" onClick={() => handleLockUser(u.username)}><Lock className="mr-2 h-4 w-4" />Lock</Button>
                             )}
                             
+                            {/* Remove user button with confirmation dialog */}
                             <AlertDialog>
                                 <AlertDialogTrigger asChild>
                                     <Button variant="destructive" size="sm"><Trash2 className="mr-2 h-4 w-4" /> Remove</Button>

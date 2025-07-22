@@ -1,31 +1,48 @@
 
 /**
- * @fileoverview Project and Document Data Definitions
- * 
+ * @fileoverview Project and Document Data Definitions and Initial State
+ *
  * @description
- * This file defines the TypeScript types for Projects and Documents, and provides
- * an initial, default set of data for the application. This data is used
- * to populate the dashboard.
+ * This file defines the core data structures for the application: `Project` and `Document`.
+ * It also exports the initial, empty state for both projects and documents. This serves as
+ * the starting point for the application's data before any user actions or data persistence
+ * from `localStorage` occurs.
  */
 
+/**
+ * Defines the structure for a project document.
+ * In a real-world application, the `url` would point to a file in a cloud storage
+ * service like Firebase Storage or Google Cloud Storage.
+ */
 export interface Document {
   id: number;
   name: string;
-  url: string; // In a real app, this would point to a file in cloud storage.
+  url: string; 
   projectId: number;
 }
 
+/**
+ * Defines the structure for a game development project.
+ * The `lead` and `assignedDevelopers` fields store the `username` of the respective users.
+ */
 export interface Project {
   id: number;
   name: string;
   description: string;
   deadline: string;
   status: "Active" | "Completed";
-  lead: string; // username of the project lead
-  assignedDevelopers: string[]; // array of usernames
+  lead: string;
+  assignedDevelopers: string[];
 }
 
-// The initial list of projects that the application starts with.
+/**
+ * The initial list of projects that the application starts with.
+ * This is an empty array to ensure a clean slate.
+ */
 export const initialProjects: Project[] = [];
 
+/**
+ * The initial list of documents that the application starts with.
+ * This is an empty array to ensure a clean slate.
+ */
 export const initialDocuments: Document[] = [];

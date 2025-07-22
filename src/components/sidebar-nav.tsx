@@ -17,13 +17,16 @@ import { SidebarMenu, SidebarMenuItem, SidebarMenuButton } from "./ui/sidebar";
  * @fileoverview Sidebar Navigation Component for PixelForge Nexus
  * 
  * @description
- * This component builds the navigation menu for the dashboard. It dynamically renders
- * navigation items based on the user's role (Admin, Project Lead, Developer).
+ * This component builds the primary navigation menu for the dashboard sidebar.
+ * It dynamically renders navigation links based on the authenticated user's role,
+ * ensuring that users only see links to pages they are authorized to access.
  */
 export function SidebarNav() {
   const pathname = usePathname();
   const { user, isLoading } = useAuth();
 
+  // Defines all possible navigation items, each with an icon, label, URL,
+  // and a `roles` array specifying who can see the link.
   const navItems = [
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, roles: ['admin', 'project-lead', 'developer'] },
     { href: "/dashboard/projects", label: "All Projects", icon: FolderKanban, roles: ['admin'] },
@@ -31,6 +34,8 @@ export function SidebarNav() {
     { href: "/dashboard/profile", label: "Account Settings", icon: Settings, roles: ['admin', 'project-lead', 'developer'] },
   ];
 
+  // While the user's authentication status is loading, display a skeleton UI
+  // to prevent layout shifts and provide a better user experience.
   if (isLoading) {
     return (
       <div className="flex flex-col gap-2 p-4">
@@ -41,8 +46,14 @@ export function SidebarNav() {
     );
   }
 
+  /**
+   * Filters the `navItems` array to get only the items the current user
+   * is allowed to see based on their role.
+   */
   const visibleNavItems = navItems.filter(item => {
-    if (!user || !item.roles) return true; // Should not happen, but as a safeguard
+    // This should not happen in a protected route, but it's a good safeguard.
+    if (!user) return false; 
+    // If the item has a roles array, check if the user's role is included.
     return item.roles.includes(user.role);
   });
   
@@ -50,9 +61,15 @@ export function SidebarNav() {
      <SidebarMenu>
         {visibleNavItems.map((item) => (
             <SidebarMenuItem key={item.href}>
-                 <SidebarMenuButton asChild isActive={pathname === item.href} tooltip={item.label}>
+                 <SidebarMenuButton 
+                   asChild 
+                   // The `isActive` prop highlights the current page's link in the sidebar.
+                   isActive={pathname === item.href} 
+                   tooltip={item.label}
+                 >
                     <Link href={item.href}>
                         <item.icon />
+                        {/* The label is only visible when the sidebar is expanded. */}
                         <span>{item.label}</span>
                     </Link>
                 </SidebarMenuButton>

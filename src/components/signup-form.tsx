@@ -30,11 +30,15 @@ import { createUser } from "@/lib/auth";
 
 /**
  * @fileoverview Signup Form Component
- * @description In this app, only Admins can create users. This form is a placeholder
- * and a more robust implementation would involve an admin-only registration page.
- * For now, this redirects to the login page as there is no self-registration.
+ * @description This form is a placeholder to demonstrate a public-facing signup page.
+ * In this application's security model, self-registration is disabled to prevent
+ * unauthorized access. Only administrators can create new user accounts via the
+ * "Add User" feature on their dashboard. This form simply informs the user of this
+ * policy and directs them back to the login page.
  */
 
+// A Zod schema is defined for form structure, even though the form is disabled.
+// This maintains a consistent structure with other forms in the application.
 const formSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters." }),
   username: z.string().min(3, { message: "Username must be at least 3 characters." }),
@@ -46,6 +50,7 @@ export function SignupForm() {
   const router = useRouter();
   const { toast } = useToast();
 
+  // Initialize react-hook-form.
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -56,6 +61,11 @@ export function SignupForm() {
     },
   });
 
+  /**
+   * The submit handler for the form.
+   * Instead of creating a user, it displays a toast notification explaining that
+   * self-registration is disabled and then redirects the user to the login page.
+   */
   function onSubmit() {
     toast({
         title: "Registration Disabled",
@@ -75,6 +85,7 @@ export function SignupForm() {
       <CardContent>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            {/* All form fields are disabled to prevent user input. */}
             <FormField
               control={form.control}
               name="name"
@@ -142,4 +153,3 @@ export function SignupForm() {
     </Card>
   );
 }
-

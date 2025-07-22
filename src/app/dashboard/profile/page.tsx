@@ -15,11 +15,13 @@ import { ProfilePasswordForm } from "@/components/profile-password-form";
  * 
  * @description
  * This page allows users to manage their account settings, including their
- * public profile information and password.
+ * public profile information and password. It uses a tabbed interface to
+ * separate these two functions.
  */
 export default function ProfilePage() {
   return (
     <div className="space-y-6">
+      {/* Page Header */}
       <div>
         <h1 className="text-3xl font-headline font-bold tracking-tight">
           Account Settings
@@ -29,12 +31,14 @@ export default function ProfilePage() {
         </p>
       </div>
       
+      {/* Tabbed container for Profile and Password forms */}
       <Tabs defaultValue="profile" className="w-full max-w-2xl">
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="profile">Profile</TabsTrigger>
           <TabsTrigger value="password">Password</TabsTrigger>
         </TabsList>
         
+        {/* Profile Tab Content */}
         <TabsContent value="profile">
           <Card>
             <CardHeader>
@@ -49,6 +53,7 @@ export default function ProfilePage() {
           </Card>
         </TabsContent>
         
+        {/* Password Tab Content */}
         <TabsContent value="password">
           <Card>
             <CardHeader>

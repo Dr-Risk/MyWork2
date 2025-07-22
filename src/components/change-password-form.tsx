@@ -32,12 +32,19 @@ import { Loader2 } from "lucide-react";
  * 
  * @description
  * This component provides a form for a user to set a new password. It's used
- * on the dedicated `/change-password` page, typically when a user's password
- * has expired. It includes validation to ensure the two password fields match.
+ * on the dedicated `/change-password` page, which is shown when a user's
+ * password has expired. It includes validation to ensure the new password
+ * meets length requirements and that the two password fields match.
  */
 
-// Zod schema defines the structure and validation rules for the form.
-// It includes a `refine` check to ensure the new password and confirmation password match.
+/**
+ * Zod schema defines the structure and validation rules for the form.
+ * - `newPassword`: Must be at least 8 characters.
+ * - `confirmPassword`: Must be at least 8 characters.
+ * - `refine`: A cross-field validation check to ensure the `newPassword` and
+ *   `confirmPassword` fields are identical. If they don't match, an error
+ *   is attached to the `confirmPassword` field.
+ */
 const formSchema = z.object({
   newPassword: z.string().min(8, {
     message: "Password must be at least 8 characters.",
@@ -55,7 +62,7 @@ export function ChangePasswordForm() {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
 
-  // Initialize react-hook-form with the Zod schema.
+  // Initialize react-hook-form with the Zod schema for validation.
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -64,16 +71,22 @@ export function ChangePasswordForm() {
     },
   });
 
-  // This function is called when the form is submitted and validated successfully.
+  /**
+   * Handles the form submission after successful client-side validation.
+   * @param {object} values - The validated form values.
+   */
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
     
-    // In a real application, you would make an API call here to a secure endpoint
-    // to update the user's password. The server would then hash the new password
-    // before storing it in the database.
+    /**
+     * [SECURITY] In a real application, you would make an API call here to a secure
+     * server endpoint to update the user's password. The server would then perform
+     * its own validation, hash the new password using a strong algorithm like Argon2
+     * or bcrypt, and store the new hash in the database.
+     */
     console.log("New password (would be hashed on server):", values.newPassword);
     
-    // Simulate a network delay.
+    // Simulate a network delay to mimic an API call.
     await new Promise((resolve) => setTimeout(resolve, 1000));
     setIsLoading(false);
 

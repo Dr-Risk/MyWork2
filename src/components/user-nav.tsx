@@ -19,20 +19,30 @@ import { useRouter } from "next/navigation";
 
 /**
  * @fileoverview User Navigation Dropdown Component
+ * @description This component renders the user avatar in the header and provides
+ * a dropdown menu with links for profile settings, user management (for admins),
+ * and logging out.
  */
 export function UserNav() {
   const { user, setUser, isLoading } = useAuth();
   const router = useRouter();
 
+  /**
+   * Handles the user logout process.
+   * It sets the global user state to null (which also clears localStorage)
+   * and redirects the user to the login page.
+   */
   const handleLogout = () => {
     setUser(null);
     router.push("/");
   };
 
+  // Display a loading spinner while the user's auth status is being determined.
   if (isLoading) {
     return <Loader2 className="h-5 w-5 animate-spin" />;
   }
 
+  // If there is no authenticated user, render a "Guest" dropdown with a login link.
   if (!user) {
     return (
       <DropdownMenu>
@@ -67,6 +77,7 @@ export function UserNav() {
     );
   }
 
+  // If a user is authenticated, render the full user navigation dropdown.
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -82,6 +93,7 @@ export function UserNav() {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-56" align="end" forceMount>
+        {/* Display the user's name and email */}
         <DropdownMenuLabel className="font-normal">
           <div className="flex flex-col space-y-1">
             <p className="text-sm font-medium leading-none">
@@ -100,6 +112,7 @@ export function UserNav() {
               <span>Profile</span>
             </Link>
           </DropdownMenuItem>
+          {/* [SECURITY] Admin-only link for User Management */}
           {user.role === "admin" && (
             <DropdownMenuItem asChild>
               <Link href="/dashboard/users">

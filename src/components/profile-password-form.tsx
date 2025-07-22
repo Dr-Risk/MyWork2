@@ -28,18 +28,19 @@ import { updateUserPassword } from "@/lib/auth";
  * @description
  * This component provides a secure form for an authenticated user to change
  * their own password. It requires them to enter their current password for
- * verification before allowing a change.
+ * verification before allowing a new password to be set. It includes validation
+ * to ensure the new passwords match and meet length requirements.
  */
 
 // Zod schema for validating the password change form.
-// It ensures the new passwords match and meet the minimum length requirement.
 const UpdateUserPasswordSchema = z.object({
   currentPassword: z.string().min(1, { message: "Please enter your current password." }),
   newPassword: z.string().min(8, { message: "Password must be at least 8 characters." }),
   confirmPassword: z.string()
+  // A cross-field validation to ensure the new passwords match.
 }).refine(data => data.newPassword === data.confirmPassword, {
   message: "New passwords do not match.",
-  path: ["confirmPassword"],
+  path: ["confirmPassword"], // Attach the error to the `confirmPassword` field.
 });
 
 export function ProfilePasswordForm() {
@@ -58,7 +59,10 @@ export function ProfilePasswordForm() {
     },
   });
 
-  // This function is called when the form is submitted and validated successfully.
+  /**
+   * Handles the form submission after successful validation.
+   * @param {object} values - The validated form values.
+   */
   async function onSubmit(values: z.infer<typeof UpdateUserPasswordSchema>) {
     if (!user) return; // Guard clause in case user data isn't available.
 
