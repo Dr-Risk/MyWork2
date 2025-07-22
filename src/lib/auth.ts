@@ -19,6 +19,7 @@
 import { z } from "zod";
 import fs from 'fs';
 import path from 'path';
+import { logger } from './logger'; // Import the new centralized logger
 
 // Path to the mock database file
 const dbPath = path.join(process.cwd(), 'src', 'lib', 'users.json');
@@ -83,7 +84,7 @@ const readUsersFromFile = async (): Promise<{ [key: string]: UserWithPassword }>
         const data = await fs.promises.readFile(dbPath, 'utf-8');
         return JSON.parse(data);
     } catch (error) {
-        console.error('Error reading users from file, falling back to initial data.', error);
+        logger.error('Error reading users from file, falling back to initial data.', error);
         return getInitialUsers();
     }
 };
@@ -96,7 +97,7 @@ const writeUsersToFile = async (data: { [key: string]: UserWithPassword }): Prom
     try {
         await fs.promises.writeFile(dbPath, JSON.stringify(data, null, 2));
     } catch (error) {
-        console.error('Error writing users to file.', error);
+        logger.error('Error writing users to file.', error);
     }
 };
 
@@ -167,7 +168,7 @@ export const createUser = async (
     };
     await writeUsersToFile(users);
 
-    console.log(`User '${userData.username}' created in mock database.`);
+    logger.info(`User '${userData.username}' created successfully.`);
     return { success: true, message: "User created successfully." };
 };
 
@@ -215,6 +216,7 @@ export const checkCredentials = async (username: string, pass: string): Promise<
   // 1. Validate input format.
   const validation = LoginCredentialsSchema.safeParse({ username, password: pass });
   if (!validation.success) {
+    logger.warn(`Login attempt with invalid format for username: ${username}`);
     return { status: 'invalid', message: 'Invalid username or password.' };
   }
   
@@ -225,11 +227,13 @@ export const checkCredentials = async (username: string, pass: string): Promise<
   if (!user) {
     // [SECURITY] User Enumeration Prevention (OWASP A07)
     // Return a generic message to prevent attackers from guessing valid usernames.
+    logger.warn(`Login attempt for non-existent user: ${username}`);
     return { status: 'invalid', message: 'Invalid username or password.' };
   }
 
   // 3. Check if account is locked.
   if (user.isLocked) {
+    logger.warn(`Login attempt for locked account: ${username}`);
     return { status: 'locked', message: 'Your account is locked due to too many failed login attempts.' };
   }
 
@@ -237,11 +241,13 @@ export const checkCredentials = async (username: string, pass: string): Promise<
   const isPasswordCorrect = await verifyPassword(pass, user.passwordHash);
 
   if (!isPasswordCorrect) {
+    logger.warn(`Failed login attempt for user: ${username}`);
     // [SECURITY] Brute-Force Prevention: Increment login attempts for non-admins.
     if (user.role !== 'admin') {
       user.loginAttempts++;
       if (user.loginAttempts >= MAX_LOGIN_ATTEMPTS) {
         user.isLocked = true;
+        logger.warn(`Account for user '${username}' has been locked due to excessive login attempts.`);
       }
       await writeUsersToFile(users); // Save updated attempts/lock status.
     }
@@ -253,10 +259,12 @@ export const checkCredentials = async (username: string, pass: string): Promise<
   const ninetyDaysAgo = new Date();
   ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
   if (user.role !== 'admin' && new Date(user.passwordLastChanged) < ninetyDaysAgo) {
+    logger.info(`Password has expired for user: ${username}`);
     return { status: 'expired', message: 'Your password has expired. Please change it to continue.' };
   }
 
   // 6. On success, reset login attempts and prepare the user profile to be returned.
+  logger.info(`Successful login for user: ${username}`);
   user.loginAttempts = 0;
   await writeUsersToFile(users);
   
@@ -313,7 +321,7 @@ export const updateUserRole = async (
 
   user.role = newRole;
   await writeUsersToFile(users);
-  console.log(`User '${username}' role updated to '${newRole}' in mock database.`);
+  logger.info(`User '${username}' role updated to '${newRole}'.`);
   return { success: true, message: 'User role updated successfully.' };
 };
 
@@ -334,7 +342,7 @@ export const updateUserProfile = async (
   user.initials = (data.name.match(/\b\w/g) || []).join('').toUpperCase() || '??';
   await writeUsersToFile(users);
 
-  console.log(`User '${username}' profile updated in mock database.`);
+  logger.info(`User '${username}' profile updated.`);
   const { passwordHash, loginAttempts, isLocked, passwordLastChanged, ...userProfile } = user;
   return { success: true, message: 'Profile updated successfully.', user: userProfile };
 };
@@ -354,13 +362,16 @@ export const updateUserPassword = async (
 
     // Users must provide their current password to change it.
     const isPasswordCorrect = await verifyPassword(currentPass, user.passwordHash);
-    if (!isPasswordCorrect) return { success: false, message: "Incorrect current password." };
+    if (!isPasswordCorrect) {
+        logger.warn(`Failed password change attempt for user '${username}' due to incorrect current password.`);
+        return { success: false, message: "Incorrect current password." };
+    }
 
     user.passwordHash = `${newPass}_hashed`; // MOCK HASHING
     user.passwordLastChanged = new Date().toISOString(); 
     await writeUsersToFile(users);
 
-    console.log(`User '${username}' password updated in mock database.`);
+    logger.info(`User '${username}' password updated successfully.`);
     return { success: true, message: "Password updated successfully." };
 }
 
@@ -380,7 +391,7 @@ export const lockUserAccount = async (
 
   user.isLocked = true;
   await writeUsersToFile(users);
-  console.log(`User account for '${username}' has been manually locked.`);
+  logger.info(`User account for '${username}' has been manually locked by an admin.`);
   return { success: true, message: 'User account locked successfully.' };
 };
 
@@ -398,7 +409,7 @@ export const unlockUserAccount = async (
   user.isLocked = false;
   user.loginAttempts = 0; 
   await writeUsersToFile(users);
-  console.log(`User account for '${username}' has been unlocked.`);
+  logger.info(`User account for '${username}' has been manually unlocked by an admin.`);
   return { success: true, message: 'User account unlocked successfully.' };
 };
 
@@ -416,7 +427,7 @@ export const removeUser = async (
 
     delete users[username];
     await writeUsersToFile(users);
-    console.log(`User '${username}' removed from mock database.`);
+    logger.info(`User '${username}' removed from the system by an admin.`);
     return { success: true, message: "User removed successfully." };
 };
     
