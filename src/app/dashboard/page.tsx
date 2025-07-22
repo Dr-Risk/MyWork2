@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Users, FileText, HardDriveUpload, UserPlus, Gamepad2, CheckCircle2 } from "lucide-react";
+import { PlusCircle, Users, FileText, HardDriveUpload, UserPlus, Gamepad2, CheckCircle2, Replace } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useRouter } from "next/navigation";
@@ -23,6 +23,7 @@ import { AddProjectForm } from "@/components/add-project-form";
 import { useToast } from "@/hooks/use-toast";
 import { AddUserForm } from "@/components/add-user-form";
 import { AssignTeamForm } from "@/components/assign-team-form";
+import { ChangeLeadForm } from "@/components/change-lead-form";
 import { getDevelopers, getUsers as getAllUsers, type SanitizedUser } from "@/lib/auth";
 
 /**
@@ -47,7 +48,8 @@ export default function DashboardPage() {
   const [isDataLoaded, setIsDataLoaded] = useState(false);
   const [isAddProjectOpen, setIsAddProjectOpen] = useState(false);
   const [isAddUserDialogOpen, setIsAddUserDialogOpen] = useState(false);
-
+  
+  const [editingProjectId, setEditingProjectId] = useState<number | null>(null);
   const [assignTeamProjectId, setAssignTeamProjectId] = useState<number | null>(null);
 
   /**
@@ -144,6 +146,20 @@ export default function DashboardPage() {
     setAssignTeamProjectId(null); // Close the dialog.
     toast({ title: "Team Updated", description: "The project team has been updated." });
   };
+  
+  /**
+   * Handles updating the project lead for a specific project.
+   */
+  const handleUpdateProjectLead = (projectId: number, newLeadUsername: string) => {
+    setProjects(prev => prev.map(p => {
+        if (p.id === projectId) {
+            return { ...p, lead: newLeadUsername };
+        }
+        return p;
+    }));
+    setEditingProjectId(null); // Close the dialog.
+    toast({ title: "Project Lead Updated", description: "The project lead has been changed." });
+  };
 
   /**
    * Handles uploading a file and associating it with a project.
@@ -190,6 +206,9 @@ export default function DashboardPage() {
     const canAssignTeam = user?.role === 'project-lead' && user.username === project.lead;
     // Admins and the assigned project lead can upload documents.
     const canUploadDocs = user?.role === 'admin' || (user?.role === 'project-lead' && user.username === project.lead);
+    // Only admins can change the project lead.
+    const canEditProject = user?.role === 'admin';
+
 
     return (
       <Card className="flex flex-col">
@@ -206,7 +225,28 @@ export default function DashboardPage() {
           <p className="text-sm text-muted-foreground">{project.description}</p>
           <div>
             <h4 className="font-semibold text-sm mb-2">Project Lead</h4>
-            <p className="text-sm text-muted-foreground">{projectLead?.name || project.lead}</p>
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-muted-foreground">{projectLead?.name || project.lead}</p>
+              {/* [PERMISSIONS] The "Change Lead" button is strictly admin-only. */}
+              {canEditProject && (
+                  <Dialog open={editingProjectId === project.id} onOpenChange={(isOpen) => setEditingProjectId(isOpen ? project.id : null)}>
+                    <DialogTrigger asChild>
+                      <Button variant="ghost" size="sm"><Replace className="mr-2 h-4 w-4"/> Change</Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Change Project Lead</DialogTitle>
+                        <DialogDescription>Assign a new lead for "{project.name}".</DialogDescription>
+                      </DialogHeader>
+                      <ChangeLeadForm
+                        currentLead={project.lead}
+                        projectLeads={users.filter(u => u.role === 'project-lead')}
+                        onSubmit={(newLead) => handleUpdateProjectLead(project.id, newLead)}
+                       />
+                    </DialogContent>
+                  </Dialog>
+              )}
+            </div>
           </div>
           <div>
             <h4 className="font-semibold text-sm mb-2">Assigned Team ({assignedDevsList.length})</h4>
