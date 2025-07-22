@@ -13,13 +13,24 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { FileText, CheckCircle2, Gamepad2, Users } from "lucide-react";
+import { FileText, CheckCircle2, Gamepad2, Users, Trash2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useRouter } from "next/navigation";
 import { initialProjects, initialDocuments } from "@/lib/projects";
 import type { Project, Document } from "@/lib/projects";
 import { useToast } from "@/hooks/use-toast";
 import { getUsers as getAllUsers, type SanitizedUser } from "@/lib/auth";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 /**
  * @fileoverview All Projects Page for Administrators
@@ -78,6 +89,11 @@ export default function AllProjectsPage() {
     setProjects(prev => prev.map(p => p.id === projectId ? { ...p, status: "Completed" } : p));
     toast({ title: "Project Updated", description: "Project marked as complete." });
   };
+
+  const handleDeleteProject = (projectId: number) => {
+    setProjects(prev => prev.filter(p => p.id !== projectId));
+    toast({ variant: "destructive", title: "Project Deleted", description: "The project has been permanently removed." });
+  };
   
   const ProjectCard = ({ project }: { project: Project }) => {
     const projectDocs = documents.filter(d => d.projectId === project.id);
@@ -132,6 +148,29 @@ export default function AllProjectsPage() {
                  <Button variant="default" onClick={() => handleCompleteProject(project.id)} className="w-full">
                     <CheckCircle2 className="mr-2"/> Mark as Complete
                 </Button>
+            )}
+             {user?.role === 'admin' && project.status === 'Completed' && (
+                <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                        <Button variant="destructive" className="w-full">
+                            <Trash2 className="mr-2"/> Delete Project
+                        </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                        <AlertDialogHeader>
+                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            This action cannot be undone. This will permanently delete the project "{project.name}".
+                        </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={() => handleDeleteProject(project.id)}>
+                            Yes, delete project
+                        </AlertDialogAction>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialog>
             )}
         </CardFooter>
       </Card>
