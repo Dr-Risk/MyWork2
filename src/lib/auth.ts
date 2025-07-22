@@ -27,6 +27,15 @@ import qrcode from 'qrcode';
 const dbPath = path.join(process.cwd(), 'src', 'lib', 'users.json');
 
 /**
+ * [PERFORMANCE] In-memory cache for user data.
+ * Instead of reading from the filesystem on every request, we store the user
+ * data in this variable. It's populated once on startup and updated only when
+ * a change is made, drastically improving response times for data lookups.
+ */
+let usersCache: { [key: string]: UserWithPassword } | null = null;
+
+
+/**
  * @interface UserProfile
  * @description Defines the structure for a user's public profile. This data is
  * considered "safe" to send to the client-side and display in the UI.
@@ -80,31 +89,43 @@ interface UserWithPassword extends UserProfile {
 }
 
 /**
- * Reads all users from the users.json file.
+ * Reads all users from the users.json file, using a cache to avoid redundant reads.
  * @returns A promise that resolves to the user data object.
  */
-const readUsersFromFile = async (): Promise<{ [key: string]: UserWithPassword }> => {
+const readUsers = async (): Promise<{ [key: string]: UserWithPassword }> => {
+    // If the cache is populated, return it immediately.
+    if (usersCache) {
+        return usersCache;
+    }
+
     try {
+        // If the file doesn't exist, create it with initial data.
         if (!fs.existsSync(dbPath)) {
             const initialUsers = getInitialUsers();
-            await writeUsersToFile(initialUsers);
-            return initialUsers;
+            await fs.promises.writeFile(dbPath, JSON.stringify(initialUsers, null, 2));
+            usersCache = initialUsers;
+            return usersCache;
         }
+
         const data = await fs.promises.readFile(dbPath, 'utf-8');
-        return JSON.parse(data);
+        usersCache = JSON.parse(data);
+        return usersCache!;
     } catch (error) {
         logger.error('Error reading users from file, falling back to initial data.', error);
-        return getInitialUsers();
+        usersCache = getInitialUsers();
+        return usersCache;
     }
 };
 
 /**
- * Writes the entire user object to the users.json file.
+ * Writes the entire user object to the users.json file and updates the cache.
  * @param data The user data to write.
  */
-const writeUsersToFile = async (data: { [key: string]: UserWithPassword }): Promise<void> => {
+const writeUsers = async (data: { [key: string]: UserWithPassword }): Promise<void> => {
     try {
         await fs.promises.writeFile(dbPath, JSON.stringify(data, null, 2));
+        // Invalidate and update the cache with the new data.
+        usersCache = data;
     } catch (error) {
         logger.error('Error writing users to file.', error);
     }
@@ -156,7 +177,7 @@ type CreateUserInput = z.infer<typeof CreateUserSchema>;
 export const createUser = async (
   userData: CreateUserInput
 ): Promise<{ success: boolean; message:string }> => {
-    const users = await readUsersFromFile();
+    const users = await readUsers();
     // Prevent username collisions.
     if (users[userData.username]) {
         return { success: false, message: "Username already exists." };
@@ -177,7 +198,7 @@ export const createUser = async (
         passwordLastChanged: new Date().toISOString(),
         mfaEnabled: false,
     };
-    await writeUsersToFile(users);
+    await writeUsers(users);
 
     logger.info(`User '${userData.username}' created successfully.`);
     return { success: true, message: "User created successfully." };
@@ -232,7 +253,7 @@ export const checkCredentials = async (username: string, pass: string): Promise<
     return { status: 'invalid', message: 'Invalid username or password.' };
   }
   
-  const users = await readUsersFromFile();
+  const users = await readUsers();
   const user = users[username];
 
   // 2. Check if user exists.
@@ -261,7 +282,7 @@ export const checkCredentials = async (username: string, pass: string): Promise<
         user.isLocked = true;
         logger.warn(`Account for user '${username}' has been locked due to excessive login attempts.`);
       }
-      await writeUsersToFile(users); // Save updated attempts/lock status.
+      await writeUsers(users); // Save updated attempts/lock status.
     }
     return { status: 'invalid', message: 'Invalid username or password.' };
   }
@@ -285,7 +306,7 @@ export const checkCredentials = async (username: string, pass: string): Promise<
   // 7. On success, reset login attempts and prepare the user profile to be returned.
   logger.info(`Successful login for user: ${username}`);
   user.loginAttempts = 0;
-  await writeUsersToFile(users);
+  await writeUsers(users);
   
   // [SECURITY] Data Minimization
   // Only return the non-sensitive UserProfile, not the internal UserWithPassword.
@@ -303,7 +324,7 @@ export type SanitizedUser = Omit<UserWithPassword, 'passwordHash' | 'mfaSecret'>
  * Retrieves a list of all users without their password hashes.
  */
 export const getUsers = async (): Promise<SanitizedUser[]> => {
-  const users = await readUsersFromFile();
+  const users = await readUsers();
   return Object.values(users).map(user => {
     const { passwordHash, mfaSecret, ...sanitizedUser } = user;
     return sanitizedUser;
@@ -330,7 +351,7 @@ export const updateUserRole = async (
   username: string,
   newRole: 'project-lead' | 'developer'
 ): Promise<{ success: boolean; message: string }> => {
-  const users = await readUsersFromFile();
+  const users = await readUsers();
   const user = users[username];
 
   if (!user) return { success: false, message: 'User not found.' };
@@ -339,7 +360,7 @@ export const updateUserRole = async (
   if (user.role === 'admin') return { success: false, message: 'Cannot change the role of an admin user.' };
 
   user.role = newRole;
-  await writeUsersToFile(users);
+  await writeUsers(users);
   logger.info(`User '${username}' role updated to '${newRole}'.`);
   return { success: true, message: 'User role updated successfully.' };
 };
@@ -352,14 +373,14 @@ export const updateUserProfile = async (
   username: string,
   data: { name: string; email: string }
 ): Promise<{ success: boolean; message: string; user?: UserProfile }> => {
-  const users = await readUsersFromFile();
+  const users = await readUsers();
   const user = users[username];
   if (!user) return { success: false, message: 'User not found.' };
 
   user.name = data.name;
   user.email = data.email;
   user.initials = (data.name.match(/\b\w/g) || []).join('').toUpperCase() || '??';
-  await writeUsersToFile(users);
+  await writeUsers(users);
 
   logger.info(`User '${username}' profile updated.`);
   const { passwordHash, loginAttempts, isLocked, passwordLastChanged, mfaSecret, ...userProfile } = user;
@@ -375,7 +396,7 @@ export const updateUserPassword = async (
     currentPass: string,
     newPass: string
 ): Promise<{ success: boolean; message: string }> => {
-    const users = await readUsersFromFile();
+    const users = await readUsers();
     const user = users[username];
     if (!user) return { success: false, message: "User not found." };
 
@@ -388,7 +409,7 @@ export const updateUserPassword = async (
 
     user.passwordHash = `${newPass}_hashed`; // MOCK HASHING
     user.passwordLastChanged = new Date().toISOString(); 
-    await writeUsersToFile(users);
+    await writeUsers(users);
 
     logger.info(`User '${username}' password updated successfully.`);
     return { success: true, message: "Password updated successfully." };
@@ -400,7 +421,7 @@ export const updateUserPassword = async (
 export const lockUserAccount = async (
   username: string
 ): Promise<{ success: boolean; message: string }> => {
-  const users = await readUsersFromFile();
+  const users = await readUsers();
   const user = users[username];
   if (!user) return { success: false, message: 'User not found.' };
   // [SECURITY] Admin Backdoor Removal
@@ -409,7 +430,7 @@ export const lockUserAccount = async (
   if (user.role === 'admin') return { success: false, message: 'Admin accounts cannot be locked.' };
 
   user.isLocked = true;
-  await writeUsersToFile(users);
+  await writeUsers(users);
   logger.info(`User account for '${username}' has been manually locked by an admin.`);
   return { success: true, message: 'User account locked successfully.' };
 };
@@ -420,14 +441,14 @@ export const lockUserAccount = async (
 export const unlockUserAccount = async (
   username: string
 ): Promise<{ success: boolean; message: string }> => {
-  const users = await readUsersFromFile();
+  const users = await readUsers();
   const user = users[username];
   if (!user) return { success: false, message: 'User not found.' };
   if (user.role === 'admin') return { success: false, message: 'Admin accounts cannot be locked.' };
 
   user.isLocked = false;
   user.loginAttempts = 0; 
-  await writeUsersToFile(users);
+  await writeUsers(users);
   logger.info(`User account for '${username}' has been manually unlocked by an admin.`);
   return { success: true, message: 'User account unlocked successfully.' };
 };
@@ -439,13 +460,13 @@ export const unlockUserAccount = async (
 export const removeUser = async (
     username: string
 ): Promise<{ success: boolean; message: string }> => {
-    const users = await readUsersFromFile();
+    const users = await readUsers();
     const user = users[username];
     if (!user) return { success: false, message: "User not found." };
     if (user.role === 'admin') return { success: false, message: "Cannot remove an admin account." };
 
     delete users[username];
-    await writeUsersToFile(users);
+    await writeUsers(users);
     logger.info(`User '${username}' removed from the system by an admin.`);
     return { success: true, message: "User removed successfully." };
 };
@@ -454,7 +475,7 @@ export const removeUser = async (
  * Generates a new MFA secret and a QR code for setup.
  */
 export const setupMfa = async (username: string): Promise<{ success: boolean; message: string; data?: { qrCodeDataUrl: string; secret: string } }> => {
-    const users = await readUsersFromFile();
+    const users = await readUsers();
     const user = users[username];
     if (!user) return { success: false, message: 'User not found.' };
     
@@ -464,7 +485,7 @@ export const setupMfa = async (username: string): Promise<{ success: boolean; me
 
     // Save the temporary secret to the user object.
     user.mfaSecret = secret;
-    await writeUsersToFile(users);
+    await writeUsers(users);
 
     try {
         const qrCodeDataUrl = await qrcode.toDataURL(otpauth);
@@ -477,7 +498,7 @@ export const setupMfa = async (username: string): Promise<{ success: boolean; me
 };
 
 const verifyMfaCode = async (username: string, token: string): Promise<boolean> => {
-    const users = await readUsersFromFile();
+    const users = await readUsers();
     const user = users[username];
     if (!user || !user.mfaSecret) return false;
 
@@ -495,10 +516,10 @@ export const confirmMfa = async (username: string, token: string): Promise<{ suc
         return { success: false, message: 'Invalid code. Please try again.' };
     }
 
-    const users = await readUsersFromFile();
+    const users = await readUsers();
     const user = users[username];
     user.mfaEnabled = true;
-    await writeUsersToFile(users);
+    await writeUsers(users);
 
     logger.info(`MFA enabled for user '${username}'.`);
     const { passwordHash, loginAttempts, isLocked, passwordLastChanged, mfaSecret, ...userProfile } = user;
@@ -509,13 +530,13 @@ export const confirmMfa = async (username: string, token: string): Promise<{ suc
  * Disables MFA for a user.
  */
 export const disableMfa = async (username: string): Promise<{ success: boolean; message: string; user?: UserProfile }> => {
-    const users = await readUsersFromFile();
+    const users = await readUsers();
     const user = users[username];
     if (!user) return { success: false, message: 'User not found.' };
 
     user.mfaEnabled = false;
     delete user.mfaSecret; // Remove the secret.
-    await writeUsersToFile(users);
+    await writeUsers(users);
 
     logger.info(`MFA disabled for user '${username}'.`);
     const { passwordHash, loginAttempts, isLocked, passwordLastChanged, mfaSecret, ...userProfile } = user;
@@ -535,10 +556,10 @@ export const loginWithMfa = async (username: string, token: string): Promise<Aut
     }
 
     // On success, reset login attempts and return the user profile.
-    const users = await readUsersFromFile();
+    const users = await readUsers();
     const user = users[username];
     user.loginAttempts = 0;
-    await writeUsersToFile(users);
+    await writeUsers(users);
     
     logger.info(`Successful MFA login for user: ${username}`);
     const { passwordHash, loginAttempts, isLocked, passwordLastChanged, mfaSecret, ...userProfile } = user;
