@@ -6,7 +6,8 @@
  * @description
  * This file simulates a backend authentication system for the game development
  * project management tool. It manages user data in-memory with roles tailored
- * for this purpose: 'admin', 'project-lead', and 'developer'.
+ * for this purpose: 'admin', 'project-lead', and 'developer'. It now uses a
+ * dedicated MFA service for handling multi-factor authentication logic.
  *
  * =============================================================================
  * SECURITY NOTICE (OWASP Top 10 & NIST Compliance)
@@ -20,8 +21,7 @@ import { z } from "zod";
 import fs from 'fs';
 import path from 'path';
 import { logger } from './logger';
-import { authenticator } from 'otplib';
-import qrcode from 'qrcode';
+import { generateMfaQrCode, generateMfaSecret, verifyMfaToken } from './mfa';
 
 // Path to the mock database file
 const dbPath = path.join(process.cwd(), 'src', 'lib', 'users.json');
@@ -473,22 +473,24 @@ export const removeUser = async (
 
 /**
  * Generates a new MFA secret and a QR code for setup.
+ * This function orchestrates the MFA setup by calling the MFA service.
  */
 export const setupMfa = async (username: string): Promise<{ success: boolean; message: string; data?: { qrCodeDataUrl: string; secret: string } }> => {
     const users = await readUsers();
     const user = users[username];
     if (!user) return { success: false, message: 'User not found.' };
     
-    // Create a new secret for the user.
-    const secret = authenticator.generateSecret();
-    const otpauth = authenticator.keyuri(user.email, 'PixelForge Nexus', secret);
-
-    // Save the temporary secret to the user object.
+    // Generate a new secret using the MFA service.
+    const secret = generateMfaSecret();
+    
+    // In our mock backend, we store the secret temporarily on the user object.
+    // In a real app, this might be stored in a separate temporary table.
     user.mfaSecret = secret;
     await writeUsers(users);
 
     try {
-        const qrCodeDataUrl = await qrcode.toDataURL(otpauth);
+        // Generate the QR code data URL using the MFA service.
+        const qrCodeDataUrl = await generateMfaQrCode(user.email, secret);
         logger.info(`Generated MFA setup QR code for user '${username}'.`);
         return { success: true, message: 'QR code generated.', data: { qrCodeDataUrl, secret } };
     } catch (error) {
@@ -497,28 +499,27 @@ export const setupMfa = async (username: string): Promise<{ success: boolean; me
     }
 };
 
-const verifyMfaCode = async (username: string, token: string): Promise<boolean> => {
-    const users = await readUsers();
-    const user = users[username];
-    if (!user || !user.mfaSecret) return false;
-
-    // Verify the code against the user's secret.
-    return authenticator.verify({ token, secret: user.mfaSecret });
-};
-
 /**
  * Verifies the TOTP code and completes MFA setup.
  */
 export const confirmMfa = async (username: string, token: string): Promise<{ success: boolean; message: string; user?: UserProfile }> => {
-    const isValid = await verifyMfaCode(username, token);
+    const users = await readUsers();
+    const user = users[username];
+    if (!user || !user.mfaSecret) {
+        return { success: false, message: 'MFA setup not initiated or secret is missing.' };
+    }
+
+    // Verify the code using the MFA service.
+    const isValid = verifyMfaToken(user.mfaSecret, token);
+    
     if (!isValid) {
         logger.warn(`MFA confirmation failed for user '${username}' with invalid token.`);
         return { success: false, message: 'Invalid code. Please try again.' };
     }
 
-    const users = await readUsers();
-    const user = users[username];
+    // On successful verification, finalize MFA setup.
     user.mfaEnabled = true;
+    // The secret is now permanently stored.
     await writeUsers(users);
 
     logger.info(`MFA enabled for user '${username}'.`);
@@ -549,15 +550,20 @@ export const disableMfa = async (username: string): Promise<{ success: boolean; 
  * Verifies the TOTP code and returns the full user profile on success.
  */
 export const loginWithMfa = async (username: string, token: string): Promise<AuthResponse> => {
-    const isValid = await verifyMfaCode(username, token);
+    const users = await readUsers();
+    const user = users[username];
+    if (!user || !user.mfaSecret) {
+        return { status: 'invalid', message: 'MFA not enabled or secret not found.' };
+    }
+
+    const isValid = verifyMfaToken(user.mfaSecret, token);
+    
     if (!isValid) {
         logger.warn(`MFA login failed for user '${username}' with invalid token.`);
         return { status: 'invalid', message: 'Invalid authenticator code.' };
     }
 
     // On success, reset login attempts and return the user profile.
-    const users = await readUsers();
-    const user = users[username];
     user.loginAttempts = 0;
     await writeUsers(users);
     

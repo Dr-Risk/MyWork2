@@ -9,7 +9,8 @@
     "loginAttempts": 0,
     "isLocked": false,
     "passwordLastChanged": "2025-07-23T12:00:00.000Z",
-    "mfaEnabled": false
+    "mfaEnabled": true,
+    "mfaSecret": "PB4SE7TYGUHBYSIU"
   },
   "Jcena": {
     "username": "Jcena",
@@ -21,7 +22,7 @@
     "loginAttempts": 0,
     "isLocked": false,
     "passwordLastChanged": "2025-07-22T16:30:33.941Z",
-    "mfaEnabled": false,
+    "mfaEnabled": true,
     "mfaSecret": "DVXRY3TNHBYRMA2A"
   },
   "utaker": {
@@ -31,8 +32,8 @@
     "name": "undertaker",
     "initials": "U",
     "email": "utaker@example.com",
-    "loginAttempts": 0,
-    "isLocked": false,
+    "loginAttempts": 3,
+    "isLocked": true,
     "passwordLastChanged": "2025-07-22T16:37:37.649Z",
     "mfaEnabled": false
   },
