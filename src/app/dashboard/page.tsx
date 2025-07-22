@@ -162,19 +162,22 @@ export default function DashboardPage() {
   };
 
   /**
-   * Handles uploading a file and associating it with a project.
-   * In this mock implementation, it creates a new document object without
-   * actually uploading the file to a server.
+   * Reads a file as a Data URI and adds it to the documents state.
+   * This ensures the file content is stored and persists in localStorage.
    */
   const handleFileUpload = (projectId: number, file: File) => {
-    const newDocument: Document = {
-      id: Date.now(),
-      name: file.name,
-      url: "#", // In a real app, this URL would come from a file storage service.
-      projectId,
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const newDocument: Document = {
+        id: Date.now(),
+        name: file.name,
+        url: event.target?.result as string, // Store the file content as a Data URI
+        projectId,
+      };
+      setDocuments(prev => [newDocument, ...prev]);
+      toast({ title: "File Uploaded", description: `"${file.name}" has been added to the project.` });
     };
-    setDocuments(prev => [newDocument, ...prev]);
-    toast({ title: "File Uploaded", description: `"${file.name}" has been added to the project.` });
+    reader.readAsDataURL(file);
   };
 
   /**
@@ -265,7 +268,7 @@ export default function DashboardPage() {
                     {projectDocs.map(doc => (
                         <li key={doc.id} className="text-sm flex items-center">
                             <FileText className="h-4 w-4 mr-2 text-muted-foreground" />
-                            <a href={doc.url} className="hover:underline">{doc.name}</a>
+                            <a href={doc.url} target="_blank" rel="noopener noreferrer" className="hover:underline">{doc.name}</a>
                         </li>
                     ))}
                 </ul>

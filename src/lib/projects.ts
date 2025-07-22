@@ -12,12 +12,13 @@
 /**
  * Defines the structure for a project document.
  * In a real-world application, the `url` would point to a file in a cloud storage
- * service like Firebase Storage or Google Cloud Storage.
+ * service like Firebase Storage or Google Cloud Storage. For this demo, it will store
+ * a Data URI containing the full file content.
  */
 export interface Document {
   id: number;
   name: string;
-  url: string; 
+  url: string; // This will store the file content as a Base64 Data URI.
   projectId: number;
 }
 
@@ -46,3 +47,5 @@ export const initialProjects: Project[] = [];
  * This is an empty array to ensure a clean slate.
  */
 export const initialDocuments: Document[] = [];
+
+    
