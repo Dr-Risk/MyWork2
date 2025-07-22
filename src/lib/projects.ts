@@ -1,6 +1,4 @@
 
-'use server';
-
 /**
  * @fileoverview Project and Document Data Definitions
  * 
