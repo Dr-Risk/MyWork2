@@ -80,12 +80,12 @@ A simplified threat modeling exercise was performed using the **STRIDE** model a
 - **Spoofing**: Threat of a user impersonating another.
   - **Mitigation**: Strong password policies (enforced by schema) and a secure login process.
 - **Tampering**: Threat of unauthorized data modification.
-  - **Mitigation**: Strict, server-side RBAC ensures only authorized users can modify specific data (e.g., only an Admin can change a user's role).
+  - **Mitigation**: Strict, server-side RBAC ensures only authorized users can modify specific data (e.g., only an Admin can change a user's role). This is implemented in `src/lib/auth.ts` in functions like `updateUserRole`.
 - **Repudiation**: A user denying they performed an action.
   - **Mitigation**: In a real app, this would be addressed with comprehensive audit logging. For this prototype, it's an accepted risk.
 - **Information Disclosure**: Threat of exposing sensitive data to unauthorized users.
-  - **Mitigation**: RBAC ensures users only see data they are assigned to. HTTPS (assumed standard) prevents data interception in transit. The backend never sends sensitive data (like password hashes) to the client.
+  - **Mitigation**: RBAC ensures users only see data they are assigned to (handled in `src/app/dashboard/page.tsx`'s `getVisibleProjects` function). HTTPS (assumed standard) prevents data interception in transit. The backend never sends sensitive data (like password hashes) to the client.
 - **Denial of Service**: Threat of making the system unavailable.
-  - **Mitigation**: The account lockout mechanism protects against brute-force login attacks.
+  - **Mitigation**: The account lockout mechanism in `src/lib/auth.ts` protects against brute-force login attacks.
 - **Elevation of Privilege**: A user gaining higher-level permissions.
-  - **Mitigation**: This is the most critical threat addressed. Every sensitive action is validated on the server against the user's role, preventing a user from bypassing client-side UI restrictions to perform unauthorized actions.
+  - **Mitigation**: This is the most critical threat addressed. Every sensitive action is validated on the server against the user's role, preventing a user from bypassing client-side UI restrictions to perform unauthorized actions. For example, the `handleDeleteDocument` function in `src/app/dashboard/page.tsx` is only callable if the user has the correct permissions, which are checked via the `canManageDocs` flag.

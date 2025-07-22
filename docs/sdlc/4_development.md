@@ -7,8 +7,25 @@ This document describes the practices and principles followed during the coding 
 The development process adhered to several key secure coding practices to minimize vulnerabilities.
 
 - **Input Validation**: All data received from the client is untrusted. The mock backend in `src/lib/auth.ts` uses **Zod schemas** to perform strict server-side validation. This is the authoritative source of validation and protects against injection attacks (OWASP A03) and other malformed data submissions. Client-side validation is also used for better UX but is not relied upon for security.
+
+  **Example from `src/lib/auth.ts`**:
+  ```typescript
+  /**
+   * [SECURITY] Input Validation (OWASP A03 - Injection)
+   * A Zod schema to validate the shape and content of login credentials.
+   * The regex for the username is a strict "allow-list" to prevent common
+   * injection characters. This server-side validation is the primary defense.
+   */
+  const LoginCredentialsSchema = z.object({
+    username: z.string().regex(/^[a-zA-Z0-9_.-]+$/),
+    password: z.string().min(8),
+  });
+  ```
+
 - **Strong Typing**: The project is developed using **TypeScript**. This helps prevent a wide range of common JavaScript errors, such as type coercion bugs, null pointer exceptions, and undefined properties, which can sometimes lead to security vulnerabilities.
-- **Error Handling**: The application avoids leaking sensitive information in error messages. Generic error messages are sent to the client (e.g., "Invalid username or password"), while detailed error information is logged to the console (simulating server-side logs) for debugging purposes.
+
+- **Error Handling**: The application avoids leaking sensitive information in error messages. Generic error messages are sent to the client (e.g., "Invalid username or password"), while detailed error information is logged to the console (simulating server-side logs) for debugging purposes. This is handled in the `checkCredentials` function in `src/lib/auth.ts`.
+
 - **Separation of Concerns**: The codebase is logically separated. UI components (`/components`) are distinct from business logic (`/lib`) and global state (`/context`). This makes the code easier to review for security flaws and maintain over time.
 
 ## 4.2 Use of Trusted Sources
