@@ -1,0 +1,182 @@
+
+'use client';
+
+import { useEffect, useState } from "react";
+import { useAuth } from "@/context/auth-context";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  CardFooter,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { FileText, CheckCircle2, Gamepad2, Users } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useRouter } from "next/navigation";
+import { initialProjects, initialDocuments } from "@/lib/projects";
+import type { Project, Document } from "@/lib/projects";
+import { useToast } from "@/hooks/use-toast";
+import { getUsers as getAllUsers, type SanitizedUser } from "@/lib/auth";
+
+/**
+ * @fileoverview All Projects Page for Administrators
+ * @description This page displays a comprehensive list of all projects,
+ * regardless of status or assignment. It is intended for admin use only.
+ */
+export default function AllProjectsPage() {
+  const { user, isLoading: isAuthLoading } = useAuth();
+  const router = useRouter();
+  const { toast } = useToast();
+
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [documents, setDocuments] = useState<Document[]>([]);
+  const [users, setUsers] = useState<SanitizedUser[]>([]);
+  const [isDataLoaded, setIsDataLoaded] = useState(false);
+
+  // Route protection for admins
+  useEffect(() => {
+    if (!isAuthLoading && user?.role !== 'admin') {
+      router.replace('/dashboard');
+    }
+  }, [user, isAuthLoading, router]);
+  
+  // Load data from localStorage or initial set
+  useEffect(() => {
+    async function loadData() {
+        if (isAuthLoading) return;
+        try {
+            const storedProjects = localStorage.getItem("appProjects");
+            setProjects(storedProjects ? JSON.parse(storedProjects) : initialProjects);
+
+            const storedDocs = localStorage.getItem("appDocuments");
+            setDocuments(storedDocs ? JSON.parse(storedDocs) : initialDocuments);
+            
+            const allUsers = await getAllUsers();
+            setUsers(allUsers);
+        } catch (error) {
+            console.error("Failed to load data, falling back to initial set.", error);
+            setProjects(initialProjects);
+            setDocuments(initialDocuments);
+        } finally {
+            setIsDataLoaded(true);
+        }
+    }
+    loadData();
+  }, [isAuthLoading]);
+
+  // Persist data to localStorage when it changes
+  useEffect(() => {
+    if (isDataLoaded) {
+      localStorage.setItem("appProjects", JSON.stringify(projects));
+    }
+  }, [projects, isDataLoaded]);
+
+  const handleCompleteProject = (projectId: number) => {
+    setProjects(prev => prev.map(p => p.id === projectId ? { ...p, status: "Completed" } : p));
+    toast({ title: "Project Updated", description: "Project marked as complete." });
+  };
+  
+  const ProjectCard = ({ project }: { project: Project }) => {
+    const projectDocs = documents.filter(d => d.projectId === project.id);
+    const assignedDevsList = users.filter(u => project.assignedDevelopers.includes(u.username));
+    const projectLead = users.find(u => u.username === project.lead);
+
+    return (
+      <Card className="flex flex-col">
+        <CardHeader>
+          <div className="flex justify-between items-start">
+            <CardTitle className="font-headline text-xl">{project.name}</CardTitle>
+            <Badge variant={project.status === "Active" ? "secondary" : "success"}>
+              {project.status}
+            </Badge>
+          </div>
+          <CardDescription>Deadline: {project.deadline}</CardDescription>
+        </CardHeader>
+        <CardContent className="flex-grow space-y-4">
+          <p className="text-sm text-muted-foreground">{project.description}</p>
+          <div>
+            <h4 className="font-semibold text-sm mb-2">Project Lead</h4>
+            <p className="text-sm text-muted-foreground">{projectLead?.name || project.lead}</p>
+          </div>
+          <div>
+            <h4 className="font-semibold text-sm mb-2">Assigned Team ({assignedDevsList.length})</h4>
+            <div className="flex flex-wrap gap-2">
+              {assignedDevsList.length > 0 ? (
+                assignedDevsList.map(dev => <Badge key={dev.username} variant="outline">{dev.name}</Badge>)
+              ) : (
+                <p className="text-xs text-muted-foreground">No developers assigned.</p>
+              )}
+            </div>
+          </div>
+          <div>
+            <h4 className="font-semibold text-sm mb-2">Documents ({projectDocs.length})</h4>
+            {projectDocs.length > 0 ? (
+                <ul className="space-y-1">
+                    {projectDocs.map(doc => (
+                        <li key={doc.id} className="text-sm flex items-center">
+                            <FileText className="h-4 w-4 mr-2 text-muted-foreground" />
+                            <a href={doc.url} className="hover:underline">{doc.name}</a>
+                        </li>
+                    ))}
+                </ul>
+            ) : (
+                <p className="text-xs text-muted-foreground">No documents uploaded.</p>
+            )}
+          </div>
+        </CardContent>
+        <CardFooter>
+            {user?.role === 'admin' && project.status === 'Active' && (
+                 <Button variant="default" onClick={() => handleCompleteProject(project.id)} className="w-full">
+                    <CheckCircle2 className="mr-2"/> Mark as Complete
+                </Button>
+            )}
+        </CardFooter>
+      </Card>
+    );
+  };
+
+  if (isAuthLoading || !isDataLoaded || user?.role !== 'admin') {
+    return (
+        <div className="space-y-4">
+            <Skeleton className="h-10 w-1/2" />
+            <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-2 xl:grid-cols-3">
+                <Skeleton className="h-64 w-full" />
+                <Skeleton className="h-64 w-full" />
+                <Skeleton className="h-64 w-full" />
+            </div>
+        </div>
+    );
+  }
+
+  return (
+    <>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-headline font-bold tracking-tight">
+            All Projects
+          </h1>
+          <p className="text-muted-foreground">
+            A complete list of every project in the system.
+          </p>
+        </div>
+      </div>
+
+      <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 mt-6">
+        {projects.length > 0 ? (
+          projects.map((project) => (
+            <ProjectCard key={project.id} project={project} />
+          ))
+        ) : (
+          <Card className="col-span-full flex flex-col items-center justify-center p-12">
+            <Gamepad2 className="w-16 h-16 text-muted-foreground mb-4" />
+            <CardTitle className="font-headline">No Projects Found</CardTitle>
+            <CardDescription>Get started by adding a new project on the dashboard.</CardDescription>
+          </Card>
+        )}
+      </div>
+    </>
+  );
+}
