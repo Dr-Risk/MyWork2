@@ -1,4 +1,3 @@
-
 # Troubleshooting & Quality Assurance Log
 
 This document tracks significant issues encountered during development, their resolution, and the testing strategies employed to ensure application quality and security.
