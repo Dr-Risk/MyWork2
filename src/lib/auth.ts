@@ -284,11 +284,11 @@ export const getUsers = async (): Promise<SanitizedUser[]> => {
 };
 
 /**
- * Retrieves a list of users who are developers or project leads.
+ * Retrieves a list of users who are developers.
  */
 export const getDevelopers = async (): Promise<SanitizedUser[]> => {
   const allUsers = await getUsers();
-  return allUsers.filter(u => u.role === 'developer' || u.role === 'project-lead');
+  return allUsers.filter(u => u.role === 'developer');
 }
 
 /**
