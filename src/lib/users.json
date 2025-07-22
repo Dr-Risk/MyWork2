@@ -17,7 +17,7 @@
     "name": "Jhon Cena",
     "initials": "JC",
     "email": "jcena@example.com",
-    "loginAttempts": 0,
+    "loginAttempts": 2,
     "isLocked": false,
     "passwordLastChanged": "2025-07-22T16:30:33.941Z"
   },
