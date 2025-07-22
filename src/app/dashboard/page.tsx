@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useAuth } from "@/context/auth-context";
 import {
   Card,
@@ -49,33 +49,37 @@ export default function DashboardPage() {
   const [assignTeamProjectId, setAssignTeamProjectId] = useState<number | null>(null);
 
   // Load initial data
-  useEffect(() => {
-    async function loadData() {
-      if (isLoading) return;
+  const loadData = useCallback(async () => {
+    if (isLoading) return;
 
-      try {
-        // Always start with a clean slate, ignoring localStorage for initial load.
-        localStorage.removeItem("appProjects");
-        localStorage.removeItem("appDocuments");
-        
-        setProjects(initialProjects);
-        setDocuments(initialDocuments);
-        
-        const allUsers = await getAllUsers();
-        const developerUsers = await getDevelopers();
-        setUsers(allUsers);
-        setDevelopers(developerUsers);
+    try {
+      // Always start with a clean slate, ignoring localStorage for initial load.
+      localStorage.removeItem("appProjects");
+      localStorage.removeItem("appDocuments");
+      
+      setProjects(initialProjects);
+      setDocuments(initialDocuments);
+      
+      const allUsers = await getAllUsers();
+      const developerUsers = await getDevelopers();
+      setUsers(allUsers);
+      setDevelopers(developerUsers);
 
-      } catch (error) {
-        console.error("Failed to load data, falling back to initial set.", error);
-        setProjects(initialProjects);
-        setDocuments(initialDocuments);
-      } finally {
+    } catch (error) {
+      console.error("Failed to load data, falling back to initial set.", error);
+      setProjects(initialProjects);
+      setDocuments(initialDocuments);
+    } finally {
+      if (!isDataLoaded) {
         setIsDataLoaded(true);
       }
     }
+  }, [isLoading, isDataLoaded]);
+
+  useEffect(() => {
     loadData();
-  }, [isLoading]);
+  }, [loadData]);
+
 
   // Persist data to localStorage
   useEffect(() => {
@@ -122,6 +126,12 @@ export default function DashboardPage() {
     };
     setDocuments(prev => [newDocument, ...prev]);
     toast({ title: "File Uploaded", description: `"${file.name}" has been added to the project.` });
+  };
+
+  const handleUserAdded = () => {
+    setIsAddUserOpen(false);
+    // Refetch the user data to ensure the new user appears in dropdowns.
+    loadData();
   };
 
 
@@ -250,10 +260,7 @@ export default function DashboardPage() {
                             <DialogTitle>Create New User</DialogTitle>
                             <DialogDescription>Create an account for a new Project Lead or Developer.</DialogDescription>
                         </DialogHeader>
-                        <AddUserForm onSuccess={() => {
-                            setIsAddUserOpen(false);
-                            // In a real app, you'd refetch users here.
-                        }} />
+                        <AddUserForm onSuccess={handleUserAdded} />
                     </DialogContent>
                  </Dialog>
                  <Dialog open={isAddProjectOpen} onOpenChange={setIsAddProjectOpen}>
