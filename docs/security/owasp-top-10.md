@@ -107,6 +107,17 @@ This document provides a detailed analysis of the PixelForge Nexus application a
 
 ---
 
+### A06:2021 - Vulnerable and Outdated Components
+
+**Description**: Using components, libraries, or frameworks with known vulnerabilities.
+
+**Mitigation**:
+1.  **Dependency Management**: We use `npm` to manage our dependencies, which are explicitly versioned in `package.json`.
+2.  **Regular Audits (Simulated)**: In a real development workflow, we would run `npm audit` or use services like GitHub's Dependabot to regularly scan for known vulnerabilities in our dependencies and update them promptly.
+3.  **Trusted Sources**: All libraries used (e.g., Next.js, React, ShadCN, Zod, Lucide-React) are well-maintained, popular open-source projects with active communities, which reduces the risk of using abandoned or insecure code.
+
+---
+
 ### A07:2021 – Identification and Authentication Failures
 
 **Description**: Failures in user identity management, credential management, and session management.
@@ -116,3 +127,42 @@ This document provides a detailed analysis of the PixelForge Nexus application a
 2.  **User Enumeration Prevention**: The login flow (`checkCredentials` in `src/lib/auth.ts`) returns the exact same generic error message for both an invalid username and an incorrect password. This prevents an attacker from using the login page to discover valid usernames.
 3.  **NIST-Aligned Password Policies**: We enforce a minimum password length of 8 characters and implement password expiration, aligning with modern NIST guidelines.
 4.  **Session Management (Mocked)**: For this demo, session management is handled via `localStorage` in `src/context/auth-context.tsx`. The file contains explicit comments warning that in a production environment, this should be replaced with **secure, HttpOnly cookies** to prevent session hijacking via XSS.
+
+---
+
+### A08:2021 - Software and Data Integrity Failures
+
+**Description**: Failures related to code and infrastructure that does not protect against integrity violations. This includes insecure deserialization and software updates without integrity checks.
+
+**Mitigation**:
+1.  **Data Validation**: The mock "database" (`users.json`) is read and written by `src/lib/auth.ts`. All data written to this file comes from strongly-typed, validated sources using Zod schemas (e.g., `CreateUserSchema`). This prevents malformed or arbitrary objects from being written, mitigating risks similar to insecure deserialization.
+2.  **Secure Dependencies**: We do not use any libraries that perform complex or unsafe object deserialization on untrusted data.
+3.  **Build and Deployment Pipeline (Simulated)**: In a real-world CI/CD pipeline, software updates would be built from a trusted source (our Git repository) on a secure build server. The process would not allow for un-versioned or un-audited code to be deployed.
+
+---
+
+### A09:2021 - Security Logging and Monitoring Failures
+
+**Description**: Insufficient logging, monitoring, or response to security incidents.
+
+**Mitigation**:
+1.  **Action Logging (Simulated)**: The application's backend logic (`src/lib/auth.ts`, `src/lib/projects.ts`) includes `console.log` statements for significant security-relevant events like user creation, password updates, and account lockouts. In a real application, these logs would be sent to a centralized logging service (e.g., Splunk, Datadog) for monitoring and alerting.
+    ```typescript
+    // File: src/lib/auth.ts
+    export const lockUserAccount = async (username: string) => {
+      // ...
+      console.log(`User account for '${username}' has been manually locked.`); // Example of a logged event
+      return { success: true, message: 'User account locked successfully.' };
+    };
+    ```
+2.  **Generic User-Facing Errors**: While detailed logs are generated "server-side", the client receives only generic, non-informative error messages (e.g., "Invalid username or password"), preventing attackers from gaining insights from error details.
+
+---
+
+### A10:2021 - Server-Side Request Forgery (SSRF)
+
+**Description**: Flaws that allow an attacker to induce the server-side application to make HTTP requests to an arbitrary domain of the attacker's choosing.
+
+**Mitigation**:
+1.  **No Server-to-Server Requests**: The application's current functionality does not require the server to make requests to external URLs based on user input. For example, when documents are uploaded, their content is read directly and stored as a Data URI; the server does not fetch a URL provided by the user.
+2.  **Strictly Controlled Egress (Architectural)**: In a production environment, network policies and firewall rules would be configured to deny all outbound traffic from the server by default, explicitly allowing only necessary connections to known, trusted services (e.g., Google Cloud services, database endpoints). This architectural control provides a strong defense against SSRF.
