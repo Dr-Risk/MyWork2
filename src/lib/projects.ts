@@ -26,38 +26,6 @@ export interface Project {
 }
 
 // The initial list of projects that the application starts with.
-export const initialProjects: Project[] = [
-  {
-    id: 1,
-    name: "Project Chimera",
-    description: "A next-gen open-world RPG with dynamic storytelling.",
-    deadline: "2025-12-31",
-    status: "Active",
-    lead: 'moqadri',
-    assignedDevelopers: [],
-  },
-  {
-    id: 2,
-    name: "Pixel Racers",
-    description: "A retro-style arcade racing game for mobile platforms.",
-    deadline: "2024-10-15",
-    status: "Active",
-    lead: 'moqadri',
-    assignedDevelopers: [],
-  },
-  {
-    id: 3,
-    name: "Project Nebula",
-    description: "A 4X space strategy game.",
-    deadline: "2024-08-01",
-    status: "Completed",
-    lead: 'moqadri',
-    assignedDevelopers: [],
-  },
-];
+export const initialProjects: Project[] = [];
 
-export const initialDocuments: Document[] = [
-  { id: 1, projectId: 1, name: "Game Design Document (GDD)", url: "#" },
-  { id: 2, projectId: 1, name: "Character Concept Art", url: "#" },
-  { id: 3, projectId: 2, name: "Technical Design Doc", url: "#" },
-];
+export const initialDocuments: Document[] = [];
