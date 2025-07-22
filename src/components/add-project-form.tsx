@@ -104,7 +104,7 @@ export function AddProjectForm({ projectLeads, onSubmit }: AddProjectFormProps) 
                 <FormControl>
                   <SelectTrigger>
                     <SelectValue placeholder="Select a project lead" />
-                  </Trigger>
+                  </SelectTrigger>
                 </FormControl>
                 <SelectContent>
                   {/* Populate the dropdown with the list of available project leads */}
