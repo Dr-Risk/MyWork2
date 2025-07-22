@@ -1,3 +1,4 @@
+
 {
   "moqadri": {
     "username": "moqadri",
@@ -6,9 +7,9 @@
     "name": "Mo Qadri",
     "initials": "MQ",
     "email": "mo.qadri@example.com",
-    "loginAttempts": 1,
+    "loginAttempts": 0,
     "isLocked": false,
-    "passwordLastChanged": "2024-05-23T12:00:00.000Z"
+    "passwordLastChanged": "2025-07-23T12:00:00.000Z"
   },
   "Jcena": {
     "username": "Jcena",
