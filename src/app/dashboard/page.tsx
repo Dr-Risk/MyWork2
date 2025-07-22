@@ -1,8 +1,7 @@
 
 'use client';
 
-import { useEffect, useState, useMemo } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/context/auth-context";
 import {
   Card,
@@ -14,361 +13,277 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, UserCircle, Trash2 } from "lucide-react";
+import { PlusCircle, Users, FileText, ChevronRight, HardDriveUpload, UserPlus, Gamepad2, CheckCircle2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { AddTaskForm } from "@/components/add-task-form";
-import { getUsers, type SanitizedUser } from "@/lib/auth";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
+import { useRouter } from "next/navigation";
+import { initialProjects, initialDocuments } from "@/lib/projects";
+import type { Project, Document } from "@/lib/projects";
+import { AddProjectForm } from "@/components/add-project-form";
 import { useToast } from "@/hooks/use-toast";
-import type { Task } from "@/lib/tasks";
-import { initialTasks } from "@/lib/tasks";
-import { cn } from "@/lib/utils";
+import { AddUserForm } from "@/components/add-user-form";
+import { AssignTeamForm } from "@/components/assign-team-form";
+import { getDevelopers, getUsers as getAllUsers, type SanitizedUser } from "@/lib/auth";
 
 /**
- * @fileoverview Main Dashboard Page
- * 
- * @description
- * This is the primary landing page after a user logs in. It displays a list of tasks.
- * The view is dynamic based on the user's role:
- * - Admins and full-time employees see all tasks, grouped by assignee. They can also add and delete tasks.
- * - Contractors see only the tasks assigned to them and can mark them as complete.
- * This demonstrates the Principle of Least Privilege on the UI layer.
- * 
- * The component handles fetching user and task data, reconciling it with local storage for persistence,
- * and managing the state for adding, completing, and deleting tasks.
+ * @fileoverview Main Dashboard Page for PixelForge Nexus
+ * @description This is the primary landing page after a user logs in. It displays a list
+ * of projects and provides functionality based on the user's role:
+ * - Admins: Can add new projects, mark projects as complete, and manage users.
+ * - Project Leads: Can assign developers to their projects and upload documents.
+ * - Developers: See a list of projects they are assigned to.
  */
 export default function DashboardPage() {
   const { user, isLoading } = useAuth();
   const router = useRouter();
-  
-  // State management for tasks, users, and UI elements.
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [isTasksLoaded, setIsTasksLoaded] = useState(false);
-  const [users, setUsers] = useState<SanitizedUser[]>([]);
-  const [isFormOpen, setIsFormOpen] = useState(false);
   const { toast } = useToast();
 
-  // A derived boolean to easily check if the user has administrative privileges.
-  const isPrivilegedUser = user?.role === 'admin' || !!user?.isSuperUser;
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [documents, setDocuments] = useState<Document[]>([]);
+  const [users, setUsers] = useState<SanitizedUser[]>([]);
+  const [developers, setDevelopers] = useState<SanitizedUser[]>([]);
   
-  // This effect runs once on component mount to load and reconcile all necessary data.
+  const [isDataLoaded, setIsDataLoaded] = useState(false);
+  const [isAddProjectOpen, setIsAddProjectOpen] = useState(false);
+  const [isAddUserOpen, setIsAddUserOpen] = useState(false);
+  const [assignTeamProjectId, setAssignTeamProjectId] = useState<number | null>(null);
+
+  // Load initial data
   useEffect(() => {
     async function loadData() {
       if (isLoading) return;
 
       try {
-        // Fetch the list of all current users from the mock backend.
-        const userList = await getUsers();
-        setUsers(userList);
-        const existingUsernames = new Set(userList.map(u => u.username));
+        const storedProjects = localStorage.getItem("appProjects");
+        setProjects(storedProjects ? JSON.parse(storedProjects) : initialProjects);
 
-        // Use a Map to intelligently merge default tasks with stored tasks.
-        // This ensures user changes (like completing a task) are preserved,
-        // while also making sure the app's default tasks are always present.
-        const tasksMap = new Map<number, Task>();
+        const storedDocs = localStorage.getItem("appDocuments");
+        setDocuments(storedDocs ? JSON.parse(storedDocs) : initialDocuments);
+        
+        const allUsers = await getAllUsers();
+        const developerUsers = await getDevelopers();
+        setUsers(allUsers);
+        setDevelopers(developerUsers);
 
-        // 1. Add the initial tasks from the codebase first. This establishes the base set.
-        for (const initialTask of initialTasks) {
-          tasksMap.set(initialTask.id, initialTask);
-        }
-
-        // 2. Attempt to load tasks from local storage.
-        const storedTasksJSON = localStorage.getItem('appTasks');
-        if (storedTasksJSON) {
-          const storedTasks = JSON.parse(storedTasksJSON) as Task[];
-          // 3. Overwrite the initial tasks with any stored versions.
-          // This preserves changes like a task being marked "Completed".
-          for (const storedTask of storedTasks) {
-            tasksMap.set(storedTask.id, storedTask);
-          }
-        }
-        
-        // Convert the map back to an array.
-        let reconciledTasks = Array.from(tasksMap.values());
-        
-        // Final cleanup: Filter out any tasks that are assigned to non-existent users.
-        // This prevents data from deleted users from appearing on the dashboard.
-        const finalTasks = reconciledTasks.filter(task => {
-          return task.assignee && existingUsernames.has(task.assignee);
-        });
-        
-        setTasks(finalTasks);
       } catch (error) {
         console.error("Failed to load data, falling back to initial set.", error);
-        // If there's an error (e.g., corrupted local storage), fall back to the default tasks.
-        setTasks(initialTasks.filter(task => !!task.assignee));
+        setProjects(initialProjects);
+        setDocuments(initialDocuments);
       } finally {
-        // Mark data as loaded to hide the skeleton loaders.
-        setIsTasksLoaded(true);
+        setIsDataLoaded(true);
       }
     }
-
     loadData();
   }, [isLoading]);
 
-  // This effect saves the current task list to local storage whenever it changes.
-  // The `isTasksLoaded` flag prevents saving an empty initial array before data has been loaded.
+  // Persist data to localStorage
   useEffect(() => {
-    if (isTasksLoaded) {
-      localStorage.setItem('appTasks', JSON.stringify(tasks));
+    if (isDataLoaded) {
+      localStorage.setItem("appProjects", JSON.stringify(projects));
+      localStorage.setItem("appDocuments", JSON.stringify(documents));
     }
-  }, [tasks, isTasksLoaded]);
+  }, [projects, documents, isDataLoaded]);
 
-  // Handler to mark a task as "Completed".
-  const handleCompleteTask = (taskId: number) => {
-    setTasks((currentTasks) =>
-      currentTasks.map((task) =>
-        task.id === taskId ? { ...task, status: "Completed" } : task
-      )
-    );
+  const handleAddProject = (newProject: Omit<Project, 'id' | 'status'>) => {
+    setProjects(prev => [
+      { ...newProject, id: Date.now(), status: "Active" },
+      ...prev
+    ]);
+    setIsAddProjectOpen(false);
+    toast({ title: "Project Created", description: `"${newProject.name}" has been added.` });
   };
   
-  // Handler to add a new task to the list.
-  const handleAddTask = (newTask: Task) => {
-    setTasks((currentTasks) => [newTask, ...currentTasks]);
-    setIsFormOpen(false); // Close the dialog after adding.
-  };
-  
-  // Handler to delete a task.
-  const handleDeleteTask = (taskId: number) => {
-    setTasks((currentTasks) => currentTasks.filter((task) => task.id !== taskId));
-    toast({
-      title: "Task Deleted",
-      description: "The task has been successfully removed.",
-    });
+  const handleCompleteProject = (projectId: number) => {
+    setProjects(prev => prev.map(p => p.id === projectId ? { ...p, status: "Completed" } : p));
+    toast({ title: "Project Updated", description: "Project marked as complete." });
   };
 
-  // Redirects contractors away from this page to their specific task view.
-  useEffect(() => {
-    if (!isLoading && user?.role === 'contractor') {
-      router.replace('/dashboard/users');
-    }
-  }, [user, isLoading, router]);
-  
-  // `useMemo` is used for performance optimization. It groups tasks by assignee
-  // and only recalculates when the task list or user privileges change.
-  const groupedTasks = useMemo(() => {
-    if (!isPrivilegedUser) return {};
-    return tasks.reduce((acc, task) => {
-      const assignee = users.find(u => u.username === task.assignee);
-      const assigneeName = assignee?.name || "Unassigned";
+  const handleAssignTeam = (projectId: number, assignedUsernames: string[]) => {
+     setProjects(prev => prev.map(p => {
+        if (p.id === projectId) {
+            // Get current developers and add new ones, avoiding duplicates
+            const currentDevs = new Set(p.assignedDevelopers);
+            assignedUsernames.forEach(username => currentDevs.add(username));
+            return { ...p, assignedDevelopers: Array.from(currentDevs) };
+        }
+        return p;
+    }));
+    setAssignTeamProjectId(null);
+    toast({ title: "Team Updated", description: "Developers have been assigned to the project." });
+  };
 
-      if (!acc[assigneeName]) {
-        acc[assigneeName] = [];
-      }
-      acc[assigneeName].push(task);
-      return acc;
-    }, {} as Record<string, Task[]>);
-  }, [tasks, users, isPrivilegedUser]);
+  const handleFileUpload = (projectId: number, file: File) => {
+    const newDocument: Document = {
+      id: Date.now(),
+      name: file.name,
+      url: "#", // In a real app, upload and get URL
+      projectId,
+    };
+    setDocuments(prev => [newDocument, ...prev]);
+    toast({ title: "File Uploaded", description: `"${file.name}" has been added to the project.` });
+  };
 
-  // `useMemo` to filter and get only the tasks assigned to the current non-privileged user.
-  const myTasks = useMemo(() => {
-    if (isPrivilegedUser || !user) return [];
-    return tasks.filter(task => task.assignee === user.username);
-  }, [tasks, user, isPrivilegedUser]);
 
-  // Show skeleton loaders while waiting for auth and task data.
-  if (isLoading || !isTasksLoaded) {
+  const ProjectCard = ({ project }: { project: Project }) => {
+    const projectDocs = documents.filter(d => d.projectId === project.id);
+    const assignedDevsList = users.filter(u => project.assignedDevelopers.includes(u.username));
+    const projectLead = users.find(u => u.username === project.lead);
+
     return (
-      <>
-        <div className="flex items-center justify-between">
-          <div>
-            <Skeleton className="h-8 w-48 mb-2" />
-            <Skeleton className="h-5 w-72" />
-          </div>
-          <Skeleton className="h-10 w-32" />
-        </div>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 mt-4">
-          {[...Array(4)].map((_, i) => (
-            <Card key={i}>
-              <CardHeader>
-                <Skeleton className="h-5 w-3/4" />
-                <Skeleton className="h-4 w-1/4 mt-1" />
-              </CardHeader>
-              <CardContent>
-                <Skeleton className="h-4 w-full" />
-                <Skeleton className="h-4 w-5/6 mt-1" />
-              </CardContent>
-              <CardFooter>
-                <Skeleton className="h-10 w-full" />
-              </CardFooter>
-            </Card>
-          ))}
-        </div>
-      </>
-    );
-  }
-
-  // Prevent rendering the page for contractors before the redirect happens.
-  if (user?.role === 'contractor') {
-      return null;
-  }
-
-  // A reusable component for rendering a single task card.
-  const TaskCard = ({ task }: { task: Task }) => (
-    <Card key={task.id} className={cn("flex flex-col", task.status === 'Completed' && "opacity-70")}>
-      <CardHeader>
-        <div className="flex justify-between items-start gap-2">
-          <CardTitle className="text-lg font-headline">
-            {/*
-              * [SECURITY] Cross-Site Scripting (XSS) Prevention (OWASP A03)
-              *
-              * React's JSX automatically escapes string content rendered within tags.
-              * This means that if `task.title` contained malicious code like `<script>alert('XSS')</script>`,
-              * React would render it as plain text, not executable HTML. This is a fundamental
-              * security feature of React that prevents most common XSS attacks.
-              *
-              * The only time you are vulnerable is if you use the `dangerouslySetInnerHTML` prop,
-              * which is intentionally named to warn developers of the risk. This application
-              * avoids using `dangerouslySetInnerHTML`.
-              */}
-            {task.title}
-          </CardTitle>
-          <div className="flex items-center gap-2 flex-shrink-0">
-             {task.status === "Completed" && (
-                <Badge variant="success">Completed</Badge>
-            )}
-            <Badge
-              variant={
-                task.priority === "High"
-                  ? "destructive"
-                  : task.priority === "Medium"
-                  ? "secondary"
-                  : "outline"
-              }
-            >
-              {task.priority}
+      <Card className="flex flex-col">
+        <CardHeader>
+          <div className="flex justify-between items-start">
+            <CardTitle className="font-headline text-xl">{project.name}</CardTitle>
+            <Badge variant={project.status === "Active" ? "secondary" : "success"}>
+              {project.status}
             </Badge>
           </div>
-        </div>
-        <CardDescription>{task.dueDate}</CardDescription>
-      </CardHeader>
-      <CardContent className="flex-grow space-y-3">
-        <p className="text-sm text-muted-foreground">
-          {/* [SECURITY] XSS Prevention: Same as the title, React escapes this content. */}
-          {task.description}
-        </p>
-          {/* Show the assignee only for privileged users. */}
-          {isPrivilegedUser && task.assigneeName && (
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <UserCircle className="h-4 w-4" />
-              <span>Assigned to {task.assigneeName}</span>
+          <CardDescription>Deadline: {project.deadline}</CardDescription>
+        </CardHeader>
+        <CardContent className="flex-grow space-y-4">
+          <p className="text-sm text-muted-foreground">{project.description}</p>
+          <div>
+            <h4 className="font-semibold text-sm mb-2">Project Lead</h4>
+            <p className="text-sm text-muted-foreground">{projectLead?.name || project.lead}</p>
           </div>
-        )}
-      </CardContent>
-      <CardFooter>
-      {/* Show delete button for privileged users, and complete button for others. */}
-      {isPrivilegedUser ? (
-        <AlertDialog>
-          <AlertDialogTrigger asChild>
-            <Button variant="destructive" className="w-full">
-              <Trash2 className="mr-2 h-4 w-4" /> Delete Task
-            </Button>
-          </AlertDialogTrigger>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-              <AlertDialogDescription>
-                This action cannot be undone. This will permanently delete the task "{task.title}".
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={() => handleDeleteTask(task.id)}>
-                Yes, delete task
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-      ) : (
-          <Button
-            variant={task.status === "Completed" ? "outline" : "default"}
-            className="w-full"
-            onClick={() => task.status !== 'Completed' && handleCompleteTask(task.id)}
-            disabled={task.status === 'Completed'}
-          >
-            {task.status === "Completed"
-              ? "Completed"
-              : "Mark as Complete"}
-          </Button>
-      )}
-      </CardFooter>
-    </Card>
-  );
+          <div>
+            <h4 className="font-semibold text-sm mb-2">Assigned Team ({assignedDevsList.length})</h4>
+            <div className="flex flex-wrap gap-2">
+              {assignedDevsList.length > 0 ? (
+                assignedDevsList.map(dev => <Badge key={dev.username} variant="outline">{dev.name}</Badge>)
+              ) : (
+                <p className="text-xs text-muted-foreground">No developers assigned.</p>
+              )}
+            </div>
+          </div>
+          <div>
+            <h4 className="font-semibold text-sm mb-2">Documents ({projectDocs.length})</h4>
+            {projectDocs.length > 0 ? (
+                <ul className="space-y-1">
+                    {projectDocs.map(doc => (
+                        <li key={doc.id} className="text-sm flex items-center">
+                            <FileText className="h-4 w-4 mr-2 text-muted-foreground" />
+                            <a href={doc.url} className="hover:underline">{doc.name}</a>
+                        </li>
+                    ))}
+                </ul>
+            ) : (
+                <p className="text-xs text-muted-foreground">No documents uploaded.</p>
+            )}
+          </div>
+        </CardContent>
+        <CardFooter className="grid grid-cols-2 gap-2">
+            {user?.role === 'project-lead' && user.username === project.lead && (
+                <>
+                    <Dialog open={assignTeamProjectId === project.id} onOpenChange={(isOpen) => setAssignTeamProjectId(isOpen ? project.id : null)}>
+                      <DialogTrigger asChild>
+                          <Button variant="outline"><UserPlus className="mr-2"/> Assign Team</Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                          <DialogHeader>
+                              <DialogTitle>Assign Team to "{project.name}"</DialogTitle>
+                              <DialogDescription>Select developers to add to this project.</DialogDescription>
+                          </DialogHeader>
+                          <AssignTeamForm 
+                            developers={developers.filter(d => !project.assignedDevelopers.includes(d.username))} 
+                            onSubmit={(devs) => handleAssignTeam(project.id, devs)}
+                          />
+                      </DialogContent>
+                    </Dialog>
+                    
+                    <Button variant="outline" onClick={() => document.getElementById(`file-upload-${project.id}`)?.click()}>
+                        <HardDriveUpload className="mr-2"/> Upload Docs
+                    </Button>
+                    <input type="file" id={`file-upload-${project.id}`} className="hidden" onChange={(e) => e.target.files && handleFileUpload(project.id, e.target.files[0])}/>
+                </>
+            )}
+            {user?.role === 'admin' && project.status === 'Active' && (
+                 <Button variant="default" onClick={() => handleCompleteProject(project.id)} className="col-span-2">
+                    <CheckCircle2 className="mr-2"/> Mark as Complete
+                </Button>
+            )}
+        </CardFooter>
+      </Card>
+    );
+  };
+
+  const getVisibleProjects = () => {
+    if (!user) return [];
+    switch (user.role) {
+      case 'admin':
+        return projects;
+      case 'project-lead':
+        return projects.filter(p => p.lead === user.username || p.assignedDevelopers.includes(user.username));
+      case 'developer':
+        return projects.filter(p => p.assignedDevelopers.includes(user.username));
+      default:
+        return [];
+    }
+  };
+
+  if (isLoading || !isDataLoaded) {
+    return <Skeleton className="h-64 w-full" />;
+  }
+
+  const visibleProjects = getVisibleProjects();
 
   return (
     <>
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-headline font-bold tracking-tight">
-            Dashboard
+            Project Dashboard
           </h1>
           <p className="text-muted-foreground">
-            {/* [SECURITY] UI demonstrates Least Privilege by showing different text based on role. */}
-            {isPrivilegedUser 
-                ? "Manage all tasks for your team."
-                : "Here's a list of your assigned tasks."}
+            Welcome, {user?.name}. Here are the projects you have access to.
           </p>
         </div>
-        {/* The "Add Task" button and dialog are only shown to privileged users. */}
-        {isPrivilegedUser && (
-           <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-            <DialogTrigger asChild>
-                <Button>
-                    <PlusCircle className="mr-2 h-4 w-4" /> Add New Task
-                </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[480px]">
-                <DialogHeader>
-                    <DialogTitle>Create a new task</DialogTitle>
-                    <DialogDescription>
-                        Fill in the details below to assign a new task to a team member.
-                    </DialogDescription>
-                </DialogHeader>
-                <AddTaskForm users={users} onSuccess={handleAddTask} />
-            </DialogContent>
-          </Dialog>
+        {user?.role === 'admin' && (
+            <div className="flex gap-2">
+                 <Dialog open={isAddUserOpen} onOpenChange={setIsAddUserOpen}>
+                    <DialogTrigger asChild>
+                        <Button variant="secondary"><Users className="mr-2"/> Manage Users</Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                         <DialogHeader>
+                            <DialogTitle>Create New User</DialogTitle>
+                            <DialogDescription>Create an account for a new Project Lead or Developer.</DialogDescription>
+                        </DialogHeader>
+                        <AddUserForm onSuccess={() => {
+                            setIsAddUserOpen(false);
+                            // In a real app, you'd refetch users here.
+                        }} />
+                    </DialogContent>
+                 </Dialog>
+                 <Dialog open={isAddProjectOpen} onOpenChange={setIsAddProjectOpen}>
+                    <DialogTrigger asChild>
+                        <Button><PlusCircle className="mr-2"/> Add Project</Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>Create a new project</DialogTitle>
+                            <DialogDescription>Fill in the details for the new game project.</DialogDescription>
+                        </DialogHeader>
+                        <AddProjectForm projectLeads={users.filter(u => u.role === 'project-lead' || u.role === 'admin')} onSubmit={handleAddProject} />
+                    </DialogContent>
+                 </Dialog>
+            </div>
         )}
       </div>
 
-      {/* Conditionally render the task list based on user role. */}
-      {isPrivilegedUser ? (
-        // For privileged users, render tasks grouped by assignee.
-        <div className="space-y-8 mt-6">
-          {Object.entries(groupedTasks).sort(([a], [b]) => a.localeCompare(b)).map(([assignee, userTasks]) => (
-            <div key={assignee}>
-              <h2 className="text-2xl font-headline font-bold tracking-tight">{assignee}</h2>
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 mt-4">
-                {userTasks.map((task) => (
-                  <TaskCard key={task.id} task={task} />
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-      ) : (
-        // For regular users, render a simple grid of their own tasks.
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 mt-4">
-          {myTasks.length > 0 ? (
-            myTasks.map((task) => (
-              <TaskCard key={task.id} task={task} />
-            ))
-          ) : (
-            <p className="text-muted-foreground col-span-full">You have no tasks assigned.</p>
-          )}
-        </div>
-      )}
+      <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 mt-6">
+        {visibleProjects.length > 0 ? (
+          visibleProjects.map((project) => (
+            <ProjectCard key={project.id} project={project} />
+          ))
+        ) : (
+          <Card className="col-span-full flex flex-col items-center justify-center p-12">
+            <Gamepad2 className="w-16 h-16 text-muted-foreground mb-4" />
+            <CardTitle className="font-headline">No Projects Found</CardTitle>
+            <CardDescription>You are not currently assigned to any projects.</CardDescription>
+          </Card>
+        )}
+      </div>
     </>
   );
 }

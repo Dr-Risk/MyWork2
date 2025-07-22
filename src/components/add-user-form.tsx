@@ -29,57 +29,47 @@ import { createUser } from "@/lib/auth";
 
 /**
  * @fileoverview Add User Form Component
- * 
- * @description
- * This component provides a form for administrators to create a new user account.
- * It's used within a dialog on the Developer page. Like other forms in this
- * application, it uses `react-hook-form` and `zod` for state management and validation.
+ * @description For Admins to create new users (Project Leads or Developers).
  */
-
-// Zod schema defines the structure and validation rules for the new user form.
 const formSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters." }),
   username: z.string().min(3, { message: "Username must be at least 3 characters." }),
   email: z.string().email({ message: "Please enter a valid email address." }),
   password: z.string().min(8, { message: "Password must be at least 8 characters." }),
-  role: z.enum(["full-time", "contractor"]),
+  role: z.enum(["project-lead", "developer"]),
 });
 
 type AddUserFormProps = {
-  onSuccess: () => void; // A callback function to run on successful user creation.
+  onSuccess: () => void;
 };
 
 export function AddUserForm({ onSuccess }: AddUserFormProps) {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
-  // Initialize react-hook-form with the Zod schema and default values.
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: "",
       username: "",
       email: "",
-      password: "DefaultPassword123", // Set a default password for simplicity in this demo.
-      role: "full-time",
+      password: "DefaultPassword123",
+      role: "developer",
     },
   });
 
-  // This function is called when the form is submitted and validated successfully.
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
     try {
-      // Call the mock server action to create the user.
-      const response = await createUser(values, values.role as 'full-time' | 'contractor');
+      const response = await createUser(values);
       if (response.success) {
         toast({
           title: "User Created",
           description: `User '${values.username}' was created successfully.`,
         });
-        onSuccess(); // Call the success callback (e.g., to close the dialog and refresh the user list).
-        form.reset(); // Reset the form fields.
+        onSuccess();
+        form.reset();
       } else {
-        // If the server action returns an error (e.g., username exists), show an error toast.
         toast({
           variant: "destructive",
           title: "Creation Failed",
@@ -166,8 +156,8 @@ export function AddUserForm({ onSuccess }: AddUserFormProps) {
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  <SelectItem value="full-time">Full-time</SelectItem>
-                  <SelectItem value="contractor">Contractor</SelectItem>
+                  <SelectItem value="project-lead">Project Lead</SelectItem>
+                  <SelectItem value="developer">Developer</SelectItem>
                 </SelectContent>
               </Select>
               <FormMessage />

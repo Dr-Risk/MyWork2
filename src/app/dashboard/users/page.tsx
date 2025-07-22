@@ -2,187 +2,251 @@
 'use client';
 
 import { useAuth } from "@/context/auth-context";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
-import { Users } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { useState, useMemo, useEffect } from "react";
-import type { Task } from "@/lib/tasks";
-import { initialTasks } from "@/lib/tasks";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { getUsers, updateUserRole, lockUserAccount, unlockUserAccount, removeUser, type SanitizedUser } from '@/lib/auth';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Badge } from '@/components/ui/badge';
+import { Database, PlusCircle, Lock, LockOpen, Trash2 } from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { useToast } from '@/hooks/use-toast';
+import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import { AddUserForm } from '@/components/add-user-form';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 /**
- * @fileoverview Users / My Tasks Page
- * 
- * @description
- * This page serves a dual purpose based on the logged-in user's role:
- * 1. For `contractor` users, it acts as their primary task dashboard, showing only the tasks assigned to them.
- * 2. For `full-time` and `admin` users, it's a "Connect with Friends" page, which is currently a placeholder.
- * 
- * This component demonstrates how a single route can render different content based on user permissions,
- * an example of applying the Principle of Least Privilege in the UI.
- * It also contains its own logic for fetching and persisting task data, specific to the contractor's view.
+ * @fileoverview User Management Page
+ * @description This page is for Admins to view and manage all user accounts.
+ * It provides controls for adding new users, changing roles, locking/unlocking accounts,
+ * and removing users.
  */
 export default function UsersPage() {
-    const { user, isLoading } = useAuth();
+    const { user, isLoading: isAuthLoading } = useAuth();
+    const router = useRouter();
 
-    // State management for tasks.
-    const [tasks, setTasks] = useState<Task[]>([]);
-    const [isTasksLoaded, setIsTasksLoaded] = useState(false);
+    const [users, setUsers] = useState<SanitizedUser[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [isAddUserDialogOpen, setIsAddUserDialogOpen] = useState(false);
+    const { toast } = useToast();
 
-    /**
-     * This effect runs once on component mount to load and reconcile task data for the contractor view.
-     * It uses the same robust merging logic as the main dashboard to ensure data consistency.
-     */
+    // Route protection
     useEffect(() => {
+        if (!isAuthLoading && user?.role !== 'admin') {
+            router.replace('/dashboard');
+        }
+    }, [user, isAuthLoading, router]);
+
+    const fetchUsers = async () => {
+        setIsLoading(true);
         try {
-          // Use a Map to intelligently merge default tasks with stored tasks.
-          // This ensures user changes (like completing a task) are preserved.
-          const tasksMap = new Map<number, Task>();
-          
-          // 1. Add the initial tasks from the codebase first.
-          for (const initialTask of initialTasks) {
-            tasksMap.set(initialTask.id, initialTask);
-          }
-
-          // 2. Load tasks from local storage and overwrite the defaults.
-          const storedTasksJSON = localStorage.getItem('appTasks');
-          if (storedTasksJSON) {
-            const storedTasks = (JSON.parse(storedTasksJSON) as Task[]);
-            for (const storedTask of storedTasks) {
-              tasksMap.set(storedTask.id, storedTask);
-            }
-          }
-    
-          // The final task list is the values from the map.
-          const finalTasks = Array.from(tasksMap.values());
-          setTasks(finalTasks);
-          
+            const userList = await getUsers();
+            setUsers(userList);
         } catch (error) {
-          console.error("Failed to load tasks, falling back to initial set.", error);
-          // If there's an error, fall back to the raw initial task list.
-          setTasks(initialTasks);
+            console.error("Failed to fetch users:", error);
+            toast({ variant: "destructive", title: "Error fetching users" });
         } finally {
-          setIsTasksLoaded(true);
+            setIsLoading(false);
         }
-    }, []); // Empty dependency array ensures this runs only once on mount.
-
-    /**
-     * This effect persists the task list to local storage whenever it changes.
-     * The `isTasksLoaded` flag prevents it from saving an empty array before data is loaded.
-     */
-    useEffect(() => {
-        if (isTasksLoaded) {
-            localStorage.setItem('appTasks', JSON.stringify(tasks));
-        }
-    }, [tasks, isTasksLoaded]);
-
-    // Handler for a contractor to mark their own task as complete.
-    const handleCompleteTask = (taskId: number) => {
-        const updatedTasks = tasks.map((task) =>
-          task.id === taskId ? { ...task, status: "Completed" } : task
-        );
-        setTasks(updatedTasks);
     };
 
-    // `useMemo` is used for performance to filter and get only the tasks assigned to the current user.
-    // It only recalculates when the task list or the user object changes.
-    const myTasks = useMemo(() => {
-        if (!user) return [];
-        return tasks.filter(task => task.assignee === user.username);
-    }, [tasks, user]);
+    useEffect(() => {
+        if (user?.role === 'admin') {
+            fetchUsers();
+        }
+    }, [user]);
 
-
-    // Return nothing while authentication and task data are still loading to prevent content flicker.
-    if (isLoading || !isTasksLoaded) {
-        return null;
-    }
+    const handleRoleChange = async (username: string, newRole: 'project-lead' | 'developer') => {
+        const response = await updateUserRole(username, newRole);
+        if (response.success) {
+            toast({ title: "Success", description: response.message });
+            fetchUsers();
+        } else {
+            toast({ variant: "destructive", title: "Error", description: response.message });
+        }
+    };
     
-    // If the user is a contractor, render their personalized task dashboard.
-    if (user?.role === 'contractor') {
-        return (
-            <>
-                <div>
-                    <h1 className="text-3xl font-headline font-bold tracking-tight">
-                        My Tasks
-                    </h1>
-                    <p className="text-muted-foreground">
-                        Here&apos;s a list of your assigned tasks.
-                    </p>
-                </div>
-                <div className="grid gap-4 mt-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                    {/* Map over the filtered tasks and render a card for each one. */}
-                    {myTasks.length > 0 ? myTasks.map((task) => (
-                        <Card key={task.id} className="flex flex-col">
-                            <CardHeader>
-                                <div className="flex justify-between items-start">
-                                    <CardTitle className="text-lg font-headline">
-                                        {/*
-                                        * [SECURITY] Cross-Site Scripting (XSS) Prevention
-                                        * React automatically escapes this content, preventing script injection.
-                                        */}
-                                        {task.title}
-                                    </CardTitle>
-                                    <Badge
-                                        variant={
-                                            task.priority === "High"
-                                                ? "destructive"
-                                                : task.priority === "Medium"
-                                                ? "secondary"
-                                                : "outline"
-                                        }
-                                    >
-                                        {task.priority}
-                                    </Badge>
-                                </div>
-                                <CardDescription>{task.dueDate}</CardDescription>
-                            </CardHeader>
-                            <CardContent className="flex-grow">
-                                <p className="text-sm text-muted-foreground">
-                                    {/* [SECURITY] XSS Prevention: React escapes this as well. */}
-                                    {task.description}
-                                </p>
-                            </CardContent>
-                            <CardFooter>
-                                <Button
-                                    variant={task.status === "Completed" ? "outline" : "default"}
-                                    className="w-full"
-                                    onClick={() => task.status !== 'Completed' && handleCompleteTask(task.id)}
-                                    disabled={task.status === 'Completed'}
-                                >
-                                    {task.status === "Completed"
-                                        ? "Completed"
-                                        : "Mark as Complete"}
-                                </Button>
-                            </CardFooter>
-                        </Card>
-                    )) : (
-                        <p className="text-muted-foreground col-span-full">You have no tasks assigned.</p>
-                    )}
-                </div>
-            </>
-        )
+    const handleLockUser = async (username: string) => {
+        const response = await lockUserAccount(username);
+        if (response.success) {
+            toast({ title: 'Success', description: response.message });
+            fetchUsers();
+        } else {
+            toast({ variant: 'destructive', title: 'Error', description: response.message });
+        }
+    };
+
+    const handleUnlockUser = async (username: string) => {
+        const response = await unlockUserAccount(username);
+        if (response.success) {
+            toast({ title: 'Success', description: response.message });
+            fetchUsers();
+        } else {
+            toast({ variant: 'destructive', title: 'Error', description: response.message });
+        }
+    };
+
+    const handleRemoveUser = async (username: string) => {
+        const response = await removeUser(username);
+        if (response.success) {
+            toast({ title: 'User Removed', description: response.message });
+            fetchUsers();
+        } else {
+            toast({ variant: 'destructive', title: 'Error', description: response.message });
+        }
+    };
+
+    const handleUserAdded = () => {
+        setIsAddUserDialogOpen(false);
+        fetchUsers();
+    };
+    
+    if (isAuthLoading || user?.role !== 'admin') {
+        return <Skeleton className="h-96 w-full"/>;
     }
 
-    // If the user is NOT a contractor, render the placeholder "Connect with Friends" page.
     return (
+    <>
+      <div className="flex items-center justify-between">
         <div>
-            <h1 className="text-3xl font-headline font-bold tracking-tight">
-                Connect with Friends
-            </h1>
-            <p className="text-muted-foreground">
-                Find colleagues, add them as friends, and start a conversation.
-            </p>
-            <Card className="mt-6">
-                <CardHeader>
-                    <div className="flex items-center gap-4">
-                        <Users className="w-8 h-8 text-primary"/>
-                        <div>
-                            <CardTitle>Chat Feature Coming Soon</CardTitle>
-                            <CardDescription>The ability to add friends and chat is under development. Stay tuned!</CardDescription>
-                        </div>
-                    </div>
-                </CardHeader>
-            </Card>
+            <h1 className="text-3xl font-headline font-bold tracking-tight">User Management</h1>
+            <p className="text-muted-foreground">Add, remove, and manage user roles and status.</p>
         </div>
+        <Dialog open={isAddUserDialogOpen} onOpenChange={setIsAddUserDialogOpen}>
+            <DialogTrigger asChild>
+                <Button><PlusCircle className="mr-2 h-4 w-4" /> Add User</Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[425px]">
+                <DialogHeader>
+                    <DialogTitle>Add New User</DialogTitle>
+                    <DialogDescription>
+                        Create an account for a new Project Lead or Developer.
+                    </DialogDescription>
+                </DialogHeader>
+                <AddUserForm onSuccess={handleUserAdded} />
+            </DialogContent>
+        </Dialog>
+      </div>
+
+      <Card className="mt-6">
+        <CardContent className="pt-6">
+            {isLoading ? (
+            <div className="space-y-2">
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-10 w-full" />
+            </div>
+            ) : (
+            <div className="border rounded-md">
+                <Table>
+                <TableHeader>
+                    <TableRow>
+                    <TableHead>Username</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Role</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                </TableHeader>
+                <TableBody>
+                    {users.map((u) => (
+                    <TableRow key={u.username}>
+                        <TableCell className="font-medium">{u.username}</TableCell>
+                        <TableCell>{u.email}</TableCell>
+                        <TableCell><Badge variant="secondary">{u.role}</Badge></TableCell>
+                        <TableCell>
+                        {u.isLocked ? (
+                            <Badge variant="destructive">Locked</Badge>
+                        ) : (
+                            <Badge variant="outline">Active</Badge>
+                        )}
+                        </TableCell>
+                        <TableCell className="text-right">
+                        {u.role === 'admin' ? (
+                            <Badge>Admin</Badge>
+                        ) : (
+                            <div className="flex items-center justify-end gap-2">
+                            <Select
+                                defaultValue={u.role}
+                                onValueChange={(newRole: 'project-lead' | 'developer') => handleRoleChange(u.username, newRole)}
+                            >
+                                <SelectTrigger className="w-[140px]"><SelectValue placeholder="Select role" /></SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="project-lead">Project Lead</SelectItem>
+                                    <SelectItem value="developer">Developer</SelectItem>
+                                </SelectContent>
+                            </Select>
+
+                            {u.isLocked ? (
+                                <Button variant="outline" size="sm" onClick={() => handleUnlockUser(u.username)}><LockOpen className="mr-2 h-4 w-4" />Unlock</Button>
+                            ) : (
+                                <Button variant="outline" size="sm" onClick={() => handleLockUser(u.username)}><Lock className="mr-2 h-4 w-4" />Lock</Button>
+                            )}
+                            
+                            <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                    <Button variant="destructive" size="sm"><Trash2 className="mr-2 h-4 w-4" /> Remove</Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                    <AlertDialogDescription>This will permanently delete the account for <strong>{u.name}</strong>.</AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction onClick={() => handleRemoveUser(u.username)}>Yes, remove user</AlertDialogAction>
+                                    </AlertDialogFooter>
+                                </AlertDialogContent>
+                            </AlertDialog>
+                            </div>
+                        )}
+                        </TableCell>
+                    </TableRow>
+                    ))}
+                </TableBody>
+                </Table>
+            </div>
+            )}
+        </CardContent>
+        </Card>
+    </>
     );
 }

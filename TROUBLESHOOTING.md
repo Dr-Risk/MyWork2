@@ -1,96 +1,57 @@
+
 # Troubleshooting & Quality Assurance Log
 
 This document tracks significant issues encountered during development, their resolution, and the testing strategies employed to ensure application quality and security.
 
-## Issue: Task Visibility Inconsistency (Solved)
+## Major Feature Pivot: Healthcare App to Game Dev Project Manager (Solved)
 
 ### Description
+The entire application was pivoted from its original concept as a healthcare task manager ("MediTask") to a game development project management tool ("PixelForge Nexus"). This required a complete overhaul of data models, user roles, UI/UX, and core application logic.
 
-A persistent and recurring bug was identified where tasks assigned to specific users (notably, the 'utaker' contractor account) were not appearing on their respective dashboards, even though they were present in the application's initial data. This issue manifested differently for various user roles, and initial fixes often failed to resolve the root cause.
-
-### Root Cause Analysis & Fixes
-
-The problem stemmed from several compounding issues related to state management and data persistence:
-
-1.  **Local Storage Precedence Error**: The initial implementation incorrectly prioritized data from the browser's `localStorage`. If stale or incomplete data was present (e.g., tasks from a previous version of the app), it would prevent the new, correct default tasks from being loaded.
-2.  **State Reconciliation Failure**: Attempts to merge data from `localStorage` with the default tasks were complex and brittle. The logic failed to correctly overwrite outdated records or add new ones, leading to an inconsistent state.
-3.  **Data Siloing**: At one point, contractors and employees had separate task-loading logic on different pages (`dashboard/page.tsx` vs. `dashboard/users/page.tsx`), which led to data divergence.
-
-**Final Solution**: A robust, unified data loading strategy was implemented on the main dashboard (`src/app/dashboard/page.tsx`).
--   It now uses a `Map` to create a unique list of tasks, keyed by task ID.
--   It first loads the application's default tasks into the map.
--   It then loads tasks from `localStorage` and **overwrites** any corresponding entries in the map. This ensures that user-made changes (like marking a task "Completed") are preserved, while also guaranteeing that all default tasks are present and up-to-date.
--   Finally, it filters out any tasks assigned to users who no longer exist, preventing data from deleted accounts from appearing.
+### Solution
+A systematic rewrite was performed:
+1.  **Data Models**: The `Task` model in `src/lib/tasks.ts` was replaced with `Project` and `Document` models in `src/lib/projects.ts`.
+2.  **User Roles**: User roles in `src/lib/auth.ts` were changed from `admin`, `full-time`, `contractor` to `admin`, `project-lead`, `developer`.
+3.  **UI Overhaul**:
+    *   The main dashboard (`src/app/dashboard/page.tsx`) was rebuilt to display a list of projects instead of tasks.
+    *   Role-based functionality was implemented: Admins can add projects and manage users; Project Leads can assign developers and upload documents.
+    *   New components like `AddProjectForm` and `AssignTeamForm` were created.
+4.  **Navigation**: The sidebar navigation (`src/components/sidebar-nav.tsx`) was updated to reflect the new application structure, removing irrelevant links (Blog, Events, etc.) and adding links to project and user management pages.
+5.  **Cleanup**: All irrelevant pages and components related to the old "MediTask" concept were removed to streamline the codebase.
 
 ### Testing Strategy
+-   **Manual UAT**: Performed comprehensive testing by logging in as each of the new roles (`admin`, `project-lead`, `developer`) and verifying that the UI and functionality correctly matched the specified permissions.
+-   **Component Verification**: Manually tested new components like `AddProjectForm` to ensure they correctly updated the application's state and persisted data to `localStorage`.
 
-To identify and resolve this issue, and to prevent similar bugs in the future, a multi-layered testing approach was adopted.
-
-#### 1. Static & Dynamic Analysis
-
--   **Static Analysis**: We leverage TypeScript (`tsc --noEmit`) and ESLint (`next lint`) to catch type errors and code style issues before runtime. This ensures code quality and consistency.
--   **Dynamic Analysis**: The primary debugging method involved using the browser's Developer Tools to inspect `localStorage` and trace the component lifecycle in React DevTools. This allowed us to observe the incorrect state being loaded and persisted, which was key to identifying the root cause.
-
-#### 2. Component & Integration Testing
-
--   **Unit/Component Testing**: In a production environment, Jest and React Testing Library would be used to test individual components and hooks. For instance, the `useAuth` hook and the task-loading logic within the dashboard would have dedicated test files to verify their behavior in isolation (e.g., `dashboard.test.tsx`).
--   **Integration Testing**: The core of the issue lay at the integration level. A proper integration test would involve:
-    1.  Mocking `localStorage` to simulate various states (empty, stale data, current data).
-    2.  Rendering the `DashboardLayout` with the `DashboardPage`.
-    3.  Asserting that the correct tasks are displayed for different user roles (`admin`, `contractor`).
-    4.  Simulating user actions (e.g., completing a task) and verifying that the state updates correctly and persists to the mocked `localStorage`.
-
-#### 3. End-to-End (E2E) & User Acceptance Testing (UAT)
-
--   **E2E Testing**: A framework like Cypress or Playwright would be used to script and automate full user journeys. A critical test case would be:
-    1.  `cy.loginAs('admin')`
-    2.  Navigate to the Developer page and create a new contractor user.
-    3.  Navigate to the Dashboard and assign a new task to the contractor.
-    4.  `cy.logout()`
-    5.  `cy.loginAs('contractor')`
-    6.  Assert that the newly assigned task is visible on the contractor's dashboard.
--   **User Testing**: The repeated feedback loop during this debugging process served as a form of manual UAT. By reporting that the issue persisted, the end-user helped confirm that the fixes were not yet complete, forcing a deeper investigation. This highlights the invaluable role of manual testing and user feedback in the development cycle.
-
-This structured approach ensures that all layers of the application are validated, from individual functions to complete user workflows, significantly improving reliability and security.
-
-## Issue: Task Status Inconsistency Across Roles (Solved)
+## Issue: Persistent Login Failures due to Stale Data (Solved)
 
 ### Description
-
-When a `contractor` user marked a task as "Completed," the status change was correctly saved but was not visible on the `admin` or `full-time` user dashboards. This created a data discrepancy where managers could not see the actual progress of their team's tasks.
+After updating default passwords, users (including the primary `moqadri` admin) were frequently unable to log in, receiving an "Invalid username or password" error despite using the correct credentials. Initial fixes were ineffective, leading to server startup failures.
 
 ### Root Cause Analysis & Fixes
+The issue stemmed from a flawed and overly complex data-caching mechanism in the mock backend (`src/lib/auth.ts`).
+1.  **State Caching**: The development server was holding onto old user data in memory across reloads, meaning the new passwords were not being loaded correctly.
+2.  **Inconsistent Data Access**: Attempts to fix the caching issue introduced more complexity, where different functions within the same file were accessing the user data in different ways, leading to unpredictable states and server compilation errors.
 
-The issue was purely a UI rendering problem on the main dashboard page (`src/app/dashboard/page.tsx`). The underlying data in `localStorage` was being updated correctly, but the `TaskCard` component used by admin and full-time users did not have the logic to visually represent the "Completed" status.
-
-**Solution**: The `TaskCard` component was updated to:
-1.  Display a green "Completed" badge when `task.status === 'Completed'`. A new "success" variant was added to the `Badge` component to support this.
-2.  Apply a dimming effect (`opacity-70`) to the entire card for completed tasks, making them visually distinct from active tasks.
+**Final Solution**: The entire caching mechanism was removed. The `auth.ts` file was refactored to use a simple, reliable function that provides a fresh, clean copy of the initial user data whenever it's needed. This ensures that every server reload starts with a predictable and correct state, permanently resolving the login issues and the associated server instability.
 
 ### Testing Strategy
-
--   **Manual UAT**: Logged in as a `contractor`, completed a task, logged out. Logged in as an `admin` and verified that the same task now appeared on the dashboard with the green "Completed" badge and dimmed styling.
+-   **Restart & Login**: After implementing the fix, the development server was restarted multiple times. Login was attempted with the `moqadri` account and the correct `DefaultPassword123` password after each restart to confirm that the stale data issue was resolved.
 
 ## Issue: Multiple Security Vulnerabilities Identified and Remediated (Solved)
 
 ### Description
-
 A series of security audits identified several vulnerabilities related to authentication, input validation, and access control. These included weak default passwords, insufficient server-side validation, and a developer backdoor.
 
 ### Root Cause Analysis & Fixes
-
-A comprehensive security hardening pass was performed, resulting in the following fixes:
-
-1.  **Weak Default Passwords**: The initial default password was a simple dictionary word. This was updated to `DefaultPassword123` across the mock database to better align with NIST password guidelines (favoring length over arbitrary complexity rules).
-2.  **Missing Server-Side Validation**: The `checkCredentials` function in `src/lib/auth.ts` lacked validation for input format, trusting the client-side checks. This was a critical flaw, as client-side validation can be bypassed. Strict Zod schemas were added on the server to mirror and enforce client-side rules for usernames and passwords.
-3.  **SQL Injection Vector**: The server-side username validation was initially too permissive, allowing characters commonly used in SQL injection (SQLi) attacks. The validation was hardened using a strict "allow-list" regular expression (`/^[a-zA-Z0-9_.-]+$/`). This ensures that only safe characters can be processed by the backend.
-4.  **Admin Backdoor**: A special case in the authentication logic in `src/lib/auth.ts` allowed the `moqadri` admin user to bypass the account lockout mechanism. This backdoor was removed entirely, ensuring all accounts (including admins) are subject to the same security controls for failed login attempts.
-5.  **Lack of In-Code Security Documentation**: There was a lack of comments explaining the security measures in place. This was remediated by adding extensive, detailed comments in all relevant files (`login-form.tsx`, `auth.ts`, `dashboard/page.tsx`, etc.) explaining how **Input Validation**, **Cross-Site Scripting (XSS) Prevention**, and **SQL Injection Prevention** (with examples of using parameterized queries) are handled.
+1.  **Weak Default Passwords**: Updated the default password to `DefaultPassword123` to better align with NIST password guidelines.
+2.  **Missing Server-Side Validation**: Added strict Zod schemas on the server (`src/lib/auth.ts`) to mirror and enforce client-side rules for usernames and passwords.
+3.  **SQL Injection Vector**: Hardened server-side username validation with a strict "allow-list" regular expression (`/^[a-zA-Z0-9_.-]+$/`) to prevent injection attacks.
+4.  **Admin Backdoor**: Removed a special case in the authentication logic that allowed the `moqadri` admin user to bypass the account lockout mechanism.
+5.  **Lack of In-Code Security Documentation**: Added extensive comments in all relevant files explaining how **Input Validation**, **Cross-Site Scripting (XSS) Prevention**, and **SQL Injection Prevention** are handled.
 
 ### Testing Strategy
-
 -   **Manual Penetration Testing**:
-    -   Attempted to log in with the old password to confirm it was no longer valid.
-    -   Entered SQLi-like strings (e.g., `' OR 1=1 --`) and other invalid characters into the username field to verify that the new, stricter validation rejects them on both the client and server.
+    -   Attempted to log in with invalid characters (e.g., `' OR 1=1 --`) to verify that the stricter validation rejects them.
     -   Intentionally failed login attempts for the admin user to confirm that the account lockout mechanism now applies correctly.
--   **Code Review**: Performed a full review of the codebase to ensure security comments were added, were accurate, and provided clear guidance for future development, particularly regarding the transition to a production environment with a real database.
+-   **Code Review**: Performed a full review to ensure security comments were accurate and provided clear guidance.

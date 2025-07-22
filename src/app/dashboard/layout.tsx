@@ -17,13 +17,12 @@ import { useAuth } from "@/context/auth-context";
 import { cn } from "@/lib/utils";
 
 /**
- * @fileoverview Main Dashboard Layout
+ * @fileoverview Main Dashboard Layout for PixelForge Nexus
  * 
  * @description
  * This component defines the primary layout for the authenticated part of the application.
- * It includes a persistent sidebar (collapsible on desktop), a header with user navigation,
- * and a main content area where nested pages are rendered. It also handles route
- * protection by redirecting unauthenticated users to the login page.
+ * It includes a persistent sidebar, a header with user navigation, and a main content area.
+ * It also handles route protection by redirecting unauthenticated users to the login page.
  */
 export default function DashboardLayout({
   children,
@@ -33,23 +32,10 @@ export default function DashboardLayout({
   const { user, isLoading } = useAuth();
   const router = useRouter();
   
-  // State to manage the collapsed/expanded state of the desktop sidebar.
   const [isCollapsed, setIsCollapsed] = useState(false);
 
   /**
-   * [SECURITY] This is a client-side route protection check.
-   *
-   * OWASP A01 - Broken Access Control & A07 - Identification and Authentication Failures:
-   * This `useEffect` hook ensures that only authenticated users can access the dashboard area.
-   * If the `user` object is not present after the initial load, it redirects to the login page.
-   * 
-   * While client-side checks are good for user experience (e.g., quick redirects),
-   * they are not a substitute for robust server-side authorization. A malicious actor
-   * could potentially bypass this client-side code.
-   *
-   * In a production application, every page load and API request for protected
-   * resources must be verified on the server to ensure the user has a valid,
-   * unexpired session and the necessary permissions for the requested resource.
+   * [SECURITY] Client-side route protection.
    */
   useEffect(() => {
     if (!isLoading && !user) {
@@ -57,8 +43,6 @@ export default function DashboardLayout({
     }
   }, [user, isLoading, router]);
 
-  // Display a loading spinner while the authentication state is being determined.
-  // This prevents a flash of the login page for already authenticated users.
   if (isLoading || !user) {
     return (
       <div className="flex min-h-screen w-full items-center justify-center bg-background">
@@ -67,14 +51,12 @@ export default function DashboardLayout({
     );
   }
   
-  // The main layout grid. It uses a CSS grid that adjusts its columns based on
-  // the sidebar's collapsed state for a responsive feel.
   return (
     <div className={cn(
       "grid min-h-screen w-full transition-all",
       isCollapsed ? "md:grid-cols-[64px_1fr]" : "md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]"
     )}>
-      {/* Sidebar for desktop view. It's hidden on mobile. */}
+      {/* Sidebar for desktop view */}
       <div className="hidden border-r bg-card md:block">
         <div className="flex h-full max-h-screen flex-col">
           <div className="flex h-14 shrink-0 items-center border-b px-4 lg:h-[60px] lg:px-6">
@@ -83,15 +65,12 @@ export default function DashboardLayout({
               className="flex items-center gap-2 font-semibold font-headline"
             >
               <Logo />
-              {/* The app name is hidden when the sidebar is collapsed. */}
               <span className={cn(isCollapsed && "hidden")}>PixelForge Nexus</span>
             </a>
           </div>
           <div className="flex-1 overflow-auto py-2">
-            {/* The SidebarNav component handles rendering links based on user role (Least Privilege) */}
             <SidebarNav isCollapsed={isCollapsed} />
           </div>
-          {/* Footer of the sidebar containing the collapse/expand button. */}
           <div className="mt-auto p-4 border-t">
              <Button
                 onClick={() => setIsCollapsed(!isCollapsed)}
@@ -108,7 +87,7 @@ export default function DashboardLayout({
       <div className="flex flex-col">
         {/* Header for the main content area */}
         <header className="flex h-14 items-center gap-4 border-b bg-card px-4 lg:h-[60px] lg:px-6">
-          {/* Mobile navigation toggle (hamburger menu). Uses a Sheet component for the slide-out menu. */}
+          {/* Mobile navigation toggle */}
           <Sheet>
             <SheetTrigger asChild>
               <Button

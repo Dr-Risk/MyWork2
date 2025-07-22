@@ -19,29 +19,20 @@ import { useRouter } from "next/navigation";
 
 /**
  * @fileoverview User Navigation Dropdown Component
- * 
- * @description
- * This component renders the user avatar and dropdown menu in the main header.
- * It displays user information and provides links to the profile, settings (for admins),
- * and a logout button. It adapts its content based on whether a user is logged in or not.
  */
 export function UserNav() {
   const { user, setUser, isLoading } = useAuth();
   const router = useRouter();
 
-  // Handles the logout process by clearing the user from the auth context
-  // and redirecting to the login page.
   const handleLogout = () => {
     setUser(null);
     router.push("/");
   };
 
-  // Show a loading spinner while the authentication state is being determined.
   if (isLoading) {
     return <Loader2 className="h-5 w-5 animate-spin" />;
   }
 
-  // If no user is logged in, display a "Guest" version of the dropdown.
   if (!user) {
     return (
       <DropdownMenu>
@@ -76,15 +67,14 @@ export function UserNav() {
     );
   }
 
-  // If a user is logged in, display their information and relevant links.
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" className="relative h-9 w-9 rounded-full">
           <Avatar className="h-9 w-9">
             <AvatarImage
-              src="https://placehold.co/100x100.png"
-              alt="User avatar"
+              src={`https://placehold.co/100x100.png`}
+              alt={user.name}
               data-ai-hint="user avatar"
             />
             <AvatarFallback>{user.initials}</AvatarFallback>
@@ -95,11 +85,6 @@ export function UserNav() {
         <DropdownMenuLabel className="font-normal">
           <div className="flex flex-col space-y-1">
             <p className="text-sm font-medium leading-none">
-              {/*
-                * [SECURITY] Cross-Site Scripting (XSS) Prevention
-                * React's JSX automatically escapes user-provided data like `user.name`
-                * and `user.email`, preventing malicious scripts from being rendered.
-                */}
               {user.name}
             </p>
             <p className="text-xs leading-none text-muted-foreground">
@@ -115,18 +100,11 @@ export function UserNav() {
               <span>Profile</span>
             </Link>
           </DropdownMenuItem>
-          {/*
-            * [SECURITY] Principle of Least Privilege (OWASP A01 - Broken Access Control)
-            * The Settings link is only rendered in the UI if the user's role is 'admin'.
-            * This prevents non-admins from even seeing the link. This is a UI-level control
-            * that MUST be backed by a corresponding authorization check on the
-            * `/dashboard/settings` page itself.
-            */}
           {user.role === "admin" && (
             <DropdownMenuItem asChild>
-              <Link href="/dashboard/settings">
+              <Link href="/dashboard/users">
                 <Settings className="mr-2 h-4 w-4" />
-                <span>Settings</span>
+                <span>User Management</span>
               </Link>
             </DropdownMenuItem>
           )}

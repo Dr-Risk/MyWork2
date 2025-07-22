@@ -11,39 +11,36 @@ import { ProfileForm } from "@/components/profile-form";
 import { ProfilePasswordForm } from "@/components/profile-password-form";
 
 /**
- * @fileoverview Profile Settings Page
+ * @fileoverview Account Settings Page
  * 
  * @description
- * This page allows users to manage their account settings. It uses a tabbed
- * interface to separate the management of public profile information (like name
- * and email) from sensitive actions like changing a password.
+ * This page allows users to manage their account settings, including their
+ * public profile information and password.
  */
 export default function ProfilePage() {
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-headline font-bold tracking-tight">
-          Profile Settings
+          Account Settings
         </h1>
         <p className="text-muted-foreground">
           Manage your account details and password.
         </p>
       </div>
       
-      {/* Tabs component to switch between Profile and Password forms */}
       <Tabs defaultValue="profile" className="w-full max-w-2xl">
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="profile">Profile</TabsTrigger>
           <TabsTrigger value="password">Password</TabsTrigger>
         </TabsList>
         
-        {/* Content for the 'Profile' tab */}
         <TabsContent value="profile">
           <Card>
             <CardHeader>
               <CardTitle>Public Profile</CardTitle>
               <CardDescription>
-                Update your personal information. This will be displayed on your profile.
+                Update your personal information.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -52,13 +49,12 @@ export default function ProfilePage() {
           </Card>
         </TabsContent>
         
-        {/* Content for the 'Password' tab */}
         <TabsContent value="password">
           <Card>
             <CardHeader>
               <CardTitle>Change Password</CardTitle>
               <CardDescription>
-                Choose a new password for your account. Remember to use a strong password.
+                Choose a new password for your account.
               </CardDescription>
             </CardHeader>
             <CardContent>
