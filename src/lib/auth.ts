@@ -19,7 +19,9 @@
 import { z } from "zod";
 import fs from 'fs';
 import path from 'path';
-import { logger } from './logger'; // Import the new centralized logger
+import { logger } from './logger';
+import { authenticator } from 'otplib';
+import qrcode from 'qrcode';
 
 // Path to the mock database file
 const dbPath = path.join(process.cwd(), 'src', 'lib', 'users.json');
@@ -35,6 +37,7 @@ export interface UserProfile {
     name: string;
     initials: string;
     email: string;
+    mfaEnabled: boolean;
 }
 
 /**
@@ -68,6 +71,12 @@ interface UserWithPassword extends UserProfile {
      * Stores the date of the last password change to enforce rotation policies.
      */
     passwordLastChanged: string;
+
+    /**
+     * [SECURITY] MFA Secret
+     * The secret key for TOTP, stored encrypted in a real database.
+     */
+    mfaSecret?: string;
 }
 
 /**
@@ -117,6 +126,7 @@ function getInitialUsers(): { [key: string]: UserWithPassword } {
             loginAttempts: 0,
             isLocked: false,
             passwordLastChanged: new Date().toISOString(),
+            mfaEnabled: false,
         }
     };
 }
@@ -165,6 +175,7 @@ export const createUser = async (
         loginAttempts: 0,
         isLocked: false,
         passwordLastChanged: new Date().toISOString(),
+        mfaEnabled: false,
     };
     await writeUsersToFile(users);
 
@@ -192,7 +203,8 @@ export type AuthResponse =
     | { status: 'success'; user: UserProfile }
     | { status: 'invalid'; message: string }
     | { status: 'locked'; message: string }
-    | { status: 'expired'; message: string };
+    | { status: 'expired'; message: string }
+    | { status: 'mfa_required'; message: string; user: Pick<UserProfile, 'username' | 'mfaEnabled'> };
 
 /**
  * [SECURITY] Input Validation (OWASP A03 - Injection)
@@ -263,14 +275,21 @@ export const checkCredentials = async (username: string, pass: string): Promise<
     return { status: 'expired', message: 'Your password has expired. Please change it to continue.' };
   }
 
-  // 6. On success, reset login attempts and prepare the user profile to be returned.
+  // 6. Check if MFA is enabled
+  if (user.mfaEnabled) {
+      logger.info(`MFA required for user: ${username}`);
+      const { passwordHash, loginAttempts, isLocked, passwordLastChanged, mfaSecret, ...userProfile } = user;
+      return { status: 'mfa_required', message: 'MFA is required.', user: { username: userProfile.username, mfaEnabled: userProfile.mfaEnabled } };
+  }
+
+  // 7. On success, reset login attempts and prepare the user profile to be returned.
   logger.info(`Successful login for user: ${username}`);
   user.loginAttempts = 0;
   await writeUsersToFile(users);
   
   // [SECURITY] Data Minimization
   // Only return the non-sensitive UserProfile, not the internal UserWithPassword.
-  const { passwordHash, loginAttempts, isLocked, passwordLastChanged, ...userProfile } = user;
+  const { passwordHash, loginAttempts, isLocked, passwordLastChanged, mfaSecret, ...userProfile } = user;
   
   return { status: 'success', user: userProfile };
 }
@@ -278,7 +297,7 @@ export const checkCredentials = async (username: string, pass: string): Promise<
 /**
  * A "sanitized" user type that omits the password hash, safe to use within the app.
  */
-export type SanitizedUser = Omit<UserWithPassword, 'passwordHash'>;
+export type SanitizedUser = Omit<UserWithPassword, 'passwordHash' | 'mfaSecret'>;
 
 /**
  * Retrieves a list of all users without their password hashes.
@@ -286,7 +305,7 @@ export type SanitizedUser = Omit<UserWithPassword, 'passwordHash'>;
 export const getUsers = async (): Promise<SanitizedUser[]> => {
   const users = await readUsersFromFile();
   return Object.values(users).map(user => {
-    const { passwordHash, ...sanitizedUser } = user;
+    const { passwordHash, mfaSecret, ...sanitizedUser } = user;
     return sanitizedUser;
   });
 };
@@ -343,7 +362,7 @@ export const updateUserProfile = async (
   await writeUsersToFile(users);
 
   logger.info(`User '${username}' profile updated.`);
-  const { passwordHash, loginAttempts, isLocked, passwordLastChanged, ...userProfile } = user;
+  const { passwordHash, loginAttempts, isLocked, passwordLastChanged, mfaSecret, ...userProfile } = user;
   return { success: true, message: 'Profile updated successfully.', user: userProfile };
 };
 
@@ -430,6 +449,98 @@ export const removeUser = async (
     logger.info(`User '${username}' removed from the system by an admin.`);
     return { success: true, message: "User removed successfully." };
 };
-    
 
+/**
+ * Generates a new MFA secret and a QR code for setup.
+ */
+export const setupMfa = async (username: string): Promise<{ success: boolean; message: string; data?: { qrCodeDataUrl: string; secret: string } }> => {
+    const users = await readUsersFromFile();
+    const user = users[username];
+    if (!user) return { success: false, message: 'User not found.' };
     
+    // Create a new secret for the user.
+    const secret = authenticator.generateSecret();
+    const otpauth = authenticator.keyuri(user.email, 'PixelForge Nexus', secret);
+
+    // Save the temporary secret to the user object.
+    user.mfaSecret = secret;
+    await writeUsersToFile(users);
+
+    try {
+        const qrCodeDataUrl = await qrcode.toDataURL(otpauth);
+        logger.info(`Generated MFA setup QR code for user '${username}'.`);
+        return { success: true, message: 'QR code generated.', data: { qrCodeDataUrl, secret } };
+    } catch (error) {
+        logger.error(`Failed to generate QR code for user '${username}'.`, error);
+        return { success: false, message: 'Could not generate QR code.' };
+    }
+};
+
+const verifyMfaCode = async (username: string, token: string): Promise<boolean> => {
+    const users = await readUsersFromFile();
+    const user = users[username];
+    if (!user || !user.mfaSecret) return false;
+
+    // Verify the code against the user's secret.
+    return authenticator.verify({ token, secret: user.mfaSecret });
+};
+
+/**
+ * Verifies the TOTP code and completes MFA setup.
+ */
+export const confirmMfa = async (username: string, token: string): Promise<{ success: boolean; message: string; user?: UserProfile }> => {
+    const isValid = await verifyMfaCode(username, token);
+    if (!isValid) {
+        logger.warn(`MFA confirmation failed for user '${username}' with invalid token.`);
+        return { success: false, message: 'Invalid code. Please try again.' };
+    }
+
+    const users = await readUsersFromFile();
+    const user = users[username];
+    user.mfaEnabled = true;
+    await writeUsersToFile(users);
+
+    logger.info(`MFA enabled for user '${username}'.`);
+    const { passwordHash, loginAttempts, isLocked, passwordLastChanged, mfaSecret, ...userProfile } = user;
+    return { success: true, message: 'MFA enabled successfully!', user: userProfile };
+};
+
+/**
+ * Disables MFA for a user.
+ */
+export const disableMfa = async (username: string): Promise<{ success: boolean; message: string; user?: UserProfile }> => {
+    const users = await readUsersFromFile();
+    const user = users[username];
+    if (!user) return { success: false, message: 'User not found.' };
+
+    user.mfaEnabled = false;
+    delete user.mfaSecret; // Remove the secret.
+    await writeUsersToFile(users);
+
+    logger.info(`MFA disabled for user '${username}'.`);
+    const { passwordHash, loginAttempts, isLocked, passwordLastChanged, mfaSecret, ...userProfile } = user;
+    return { success: true, message: 'MFA has been disabled.', user: userProfile };
+};
+
+
+/**
+ * The final login step for users with MFA enabled.
+ * Verifies the TOTP code and returns the full user profile on success.
+ */
+export const loginWithMfa = async (username: string, token: string): Promise<AuthResponse> => {
+    const isValid = await verifyMfaCode(username, token);
+    if (!isValid) {
+        logger.warn(`MFA login failed for user '${username}' with invalid token.`);
+        return { status: 'invalid', message: 'Invalid authenticator code.' };
+    }
+
+    // On success, reset login attempts and return the user profile.
+    const users = await readUsersFromFile();
+    const user = users[username];
+    user.loginAttempts = 0;
+    await writeUsersToFile(users);
+    
+    logger.info(`Successful MFA login for user: ${username}`);
+    const { passwordHash, loginAttempts, isLocked, passwordLastChanged, mfaSecret, ...userProfile } = user;
+    return { status: 'success', user: userProfile };
+}

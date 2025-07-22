@@ -26,7 +26,7 @@ import {
   CardDescription,
 } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
-import { checkCredentials } from "@/lib/auth";
+import { checkCredentials, type UserProfile } from "@/lib/auth";
 import { useAuth } from "@/context/auth-context";
 
 /**
@@ -40,22 +40,6 @@ import { useAuth } from "@/context/auth-context";
  * failure, and expired passwords.
  */
 
-/**
- * [SECURITY] This Zod schema defines the validation rules for the login form fields.
- * This client-side validation provides immediate feedback to the user and is the
- * first line of defense. The primary, authoritative validation happens on the server
- * in `src/lib/auth.ts`.
- *
- * Input Validation (OWASP A03 - Injection):
- * - The regex `/^[a-zA-Z0-9_.-]+$/` enforces a strict "allow-list" of characters
- *   for the username, preventing common injection characters like `'`, `=`, or `--`.
- *
- * NIST SP 800-63B on Passwords:
- * - The password validation requires a minimum length of 8 characters but does NOT
- *   enforce complexity (e.g., symbols, numbers). Modern guidelines suggest that
- *   length is a better indicator of strength than character complexity. The most
- *   critical security control is strong, salted hashing on the server.
- */
 const formSchema = z.object({
   username: z.string()
     .min(1, { message: "Please enter your username." })
@@ -65,13 +49,16 @@ const formSchema = z.object({
   }),
 });
 
-export function LoginForm() {
+interface LoginFormProps {
+  onMfaRequired: (user: Pick<UserProfile, 'username' | 'mfaEnabled'>) => void;
+}
+
+export function LoginForm({ onMfaRequired }: LoginFormProps) {
   const router = useRouter();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
-  const { setUser } = useAuth(); // Get the setUser function from the auth context.
+  const { setUser } = useAuth();
 
-  // Initialize the form with react-hook-form and the Zod resolver for validation.
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -86,46 +73,36 @@ export function LoginForm() {
    */
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
-    
-    // Simulate network delay to mimic a real API call.
     await new Promise((resolve) => setTimeout(resolve, 500));
-
-    /**
-     * [SECURITY] In a real application, this entire submission must be sent
-     * over HTTPS to encrypt the credentials in transit, protecting against
-     * man-in-the-middle attacks (OWASP A02 - Cryptographic Failures).
-     */
     const response = await checkCredentials(values.username, values.password);
     setIsLoading(false);
 
-    // Handle the different authentication responses from the mock backend.
     switch (response.status) {
       case 'success':
-        setUser(response.user); // Update the global auth context with the user's profile.
+        setUser(response.user);
         toast({
           title: "Login Successful",
           description: "Redirecting to your dashboard...",
         });
-        router.push("/dashboard"); // Redirect to the dashboard on success.
+        router.push("/dashboard");
         break;
       
+      case 'mfa_required':
+        // If MFA is required, call the callback to show the MFA form.
+        onMfaRequired(response.user);
+        break;
+
       case 'expired':
         toast({
           variant: "destructive",
           title: "Password Expired",
           description: response.message,
         });
-        // Redirect to the password change page if the password has expired.
         router.push("/change-password");
         break;
 
       case 'locked':
       case 'invalid':
-        /**
-         * [SECURITY] User Enumeration Prevention (OWASP A07).
-         * Show a generic failure message for both locked and invalid credentials
-         * to prevent an attacker from determining whether a username is valid.
-         */
         toast({
           variant: "destructive",
           title: "Login Failed",
@@ -155,12 +132,6 @@ export function LoginForm() {
                   <FormControl>
                     <Input placeholder="Enter your username" {...field} type="text" />
                   </FormControl>
-                  {/*
-                    * [SECURITY] Cross-Site Scripting (XSS) Prevention
-                    * The error messages displayed by <FormMessage /> are derived from static
-                    * strings in the `formSchema`. They do not contain user-generated content,
-                    * making them safe from XSS. React would still escape them as a defense-in-depth measure.
-                    */}
                   <FormMessage />
                 </FormItem>
               )}
