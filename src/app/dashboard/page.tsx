@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Users, FileText, HardDriveUpload, UserPlus, Gamepad2, CheckCircle2, Replace } from "lucide-react";
+import { PlusCircle, Users, FileText, HardDriveUpload, UserPlus, Gamepad2, CheckCircle2, Replace, Eye, Download } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useRouter } from "next/navigation";
@@ -264,11 +264,25 @@ export default function DashboardPage() {
           <div>
             <h4 className="font-semibold text-sm mb-2">Documents ({projectDocs.length})</h4>
             {projectDocs.length > 0 ? (
-                <ul className="space-y-1">
+                <ul className="space-y-2">
                     {projectDocs.map(doc => (
-                        <li key={doc.id} className="text-sm flex items-center">
-                            <FileText className="h-4 w-4 mr-2 text-muted-foreground" />
-                            <a href={doc.url} target="_blank" rel="noopener noreferrer" className="hover:underline" download={doc.name}>{doc.name}</a>
+                        <li key={doc.id} className="text-sm flex items-center justify-between p-2 rounded-md bg-muted/50">
+                            <div className="flex items-center truncate">
+                                <FileText className="h-4 w-4 mr-2 text-muted-foreground flex-shrink-0" />
+                                <span className="truncate" title={doc.name}>{doc.name}</span>
+                            </div>
+                            <div className="flex items-center gap-2 ml-2">
+                                <a href={doc.url} target="_blank" rel="noopener noreferrer" title="View document">
+                                    <Button variant="ghost" size="icon" className="h-7 w-7">
+                                        <Eye className="h-4 w-4" />
+                                    </Button>
+                                </a>
+                                <a href={doc.url} download={doc.name} title="Download document">
+                                     <Button variant="ghost" size="icon" className="h-7 w-7">
+                                        <Download className="h-4 w-4" />
+                                    </Button>
+                                </a>
+                            </div>
                         </li>
                     ))}
                 </ul>
@@ -410,5 +424,3 @@ export default function DashboardPage() {
     </>
   );
 }
-
-    
