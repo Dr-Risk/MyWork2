@@ -237,11 +237,15 @@ export const checkCredentials = async (username: string, pass: string): Promise<
   const isPasswordCorrect = await verifyPassword(pass, user.passwordHash);
 
   if (!isPasswordCorrect) {
-    user.loginAttempts++;
-    if (user.loginAttempts >= MAX_LOGIN_ATTEMPTS) {
-      user.isLocked = true;
+    // [SECURITY] Admin Account Protection
+    // Do not increment login attempts or lock the account if the user is an admin.
+    if (user.role !== 'admin') {
+      user.loginAttempts++;
+      if (user.loginAttempts >= MAX_LOGIN_ATTEMPTS) {
+        user.isLocked = true;
+      }
+      await writeUsersToFile(users); // Save updated attempts/lock status.
     }
-    await writeUsersToFile(users); // Save updated attempts/lock status.
     return { status: 'invalid', message: 'Invalid username or password.' };
   }
   
