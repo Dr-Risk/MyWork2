@@ -26,6 +26,7 @@ import {
 import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { createUser } from "@/lib/auth";
+import { cn } from "@/lib/utils";
 
 /**
  * @fileoverview Add User Form Component
@@ -60,6 +61,7 @@ export function AddUserForm({ onSuccess }: AddUserFormProps) {
   // Initialize react-hook-form with the Zod resolver and default values.
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
+    mode: "onTouched",
     defaultValues: {
       name: "",
       username: "",
@@ -68,6 +70,8 @@ export function AddUserForm({ onSuccess }: AddUserFormProps) {
       role: "developer",
     },
   });
+
+  const passwordValue = form.watch("password");
 
   /**
    * The submit handler for the form.
@@ -153,7 +157,13 @@ export function AddUserForm({ onSuccess }: AddUserFormProps) {
           name="password"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Password</FormLabel>
+               <div className="flex items-center justify-between">
+                <FormLabel>Password</FormLabel>
+                <div className="flex items-center gap-2">
+                    <span className={cn("h-2 w-2 rounded-full", passwordValue.length >= 8 ? "bg-green-500" : "bg-red-500")}></span>
+                    <span className="text-xs text-muted-foreground">8+ characters</span>
+                </div>
+              </div>
               <FormControl>
                 <Input {...field} type="password" />
               </FormControl>

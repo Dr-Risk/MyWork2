@@ -26,6 +26,7 @@ import {
   CardDescription,
 } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 /**
  * @fileoverview Change Password Form Component
@@ -65,11 +66,14 @@ export function ChangePasswordForm() {
   // Initialize react-hook-form with the Zod schema for validation.
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
+    mode: "onTouched",
     defaultValues: {
       newPassword: "",
       confirmPassword: "",
     },
   });
+
+  const newPasswordValue = form.watch("newPassword");
 
   /**
    * Handles the form submission after successful client-side validation.
@@ -115,7 +119,13 @@ export function ChangePasswordForm() {
               name="newPassword"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>New Password</FormLabel>
+                  <div className="flex items-center justify-between">
+                    <FormLabel>New Password</FormLabel>
+                    <div className="flex items-center gap-2">
+                        <span className={cn("h-2 w-2 rounded-full", newPasswordValue.length >= 8 ? "bg-green-500" : "bg-red-500")}></span>
+                        <span className="text-xs text-muted-foreground">8+ characters</span>
+                    </div>
+                  </div>
                   <FormControl>
                     <Input placeholder="••••••••" {...field} type="password" />
                   </FormControl>

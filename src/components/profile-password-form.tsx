@@ -21,6 +21,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
 import { useAuth } from "@/context/auth-context";
 import { updateUserPassword } from "@/lib/auth";
+import { cn } from "@/lib/utils";
 
 /**
  * @fileoverview Profile Password Form Component
@@ -52,12 +53,15 @@ export function ProfilePasswordForm() {
   // Initialize react-hook-form with the validation schema.
   const form = useForm<z.infer<typeof UpdateUserPasswordSchema>>({
     resolver: zodResolver(UpdateUserPasswordSchema),
+    mode: "onTouched",
     defaultValues: {
       currentPassword: "",
       newPassword: "",
       confirmPassword: "",
     },
   });
+
+  const newPasswordValue = form.watch("newPassword");
 
   /**
    * Handles the form submission after successful validation.
@@ -108,7 +112,13 @@ export function ProfilePasswordForm() {
           name="newPassword"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>New Password</FormLabel>
+              <div className="flex items-center justify-between">
+                <FormLabel>New Password</FormLabel>
+                <div className="flex items-center gap-2">
+                    <span className={cn("h-2 w-2 rounded-full", newPasswordValue.length >= 8 ? "bg-green-500" : "bg-red-500")}></span>
+                    <span className="text-xs text-muted-foreground">8+ characters</span>
+                </div>
+              </div>
               <FormControl>
                 <Input placeholder="••••••••" {...field} type="password" />
               </FormControl>
