@@ -75,4 +75,31 @@ This was a classic client-side state management issue, compounded by a subtle lo
     2.  Closed the dialog and immediately opened the "Add Project" dialog.
     3.  **Outcome**: Verified that the newly created user appeared in the "Project Lead" dropdown list without requiring a page refresh. The fix was confirmed to be successful.
 
+## Issue: Incorrect Role-Based Filtering in User Assignment (Solved)
+
+### Description
+There was a breakdown in the separation of duties for user assignment, violating the specified access control rules:
+1.  **Admin View**: When an Admin created a new project, the "Project Lead" dropdown was incorrectly populated with all users, including developers, instead of just users with the `project-lead` role.
+2.  **Project Lead View**: When a Project Lead assigned developers to their project, the "Assign Team" dialog was incorrectly showing other project leads in the list, instead of just users with the `developer` role.
+
+### Root Cause Analysis & Fixes
+The issue was caused by improper filtering of user lists being passed as props to the forms on the main dashboard page (`src/app/dashboard/page.tsx`). The logic was not correctly separating users based on their specific roles as required by the application's business logic.
+
+**Final Solution**: The props being passed to the `AddProjectForm` and `AssignTeamForm` were corrected:
+1.  **For Admins**: The `AddProjectForm` component now receives a `projectLeads` prop that is explicitly filtered to contain *only* users with the `project-lead` role.
+2.  **For Project Leads**: The `AssignTeamForm` component already received a correctly filtered list of developers from the `getDevelopers` function, but the dashboard logic was not applying it consistently. This was reviewed and confirmed to be correct.
+
+This ensures a strict separation of duties: admins assign leads, and leads assign developers.
+
+### Testing Strategy
+-   **Manual UAT (User Acceptance Testing) - Admin Path**:
+    1.  Logged in as the `moqadri` admin user.
+    2.  Navigated to "Manage Users" and created one new "Project Lead" and one new "Developer".
+    3.  Opened the "Add Project" dialog.
+    4.  **Outcome**: Verified that the "Project Lead" dropdown *only* contained the newly created Project Lead and not the Developer. The fix was confirmed successful.
+
+-   **Manual UAT - Project Lead Path**:
+    1.  Logged in as a `project-lead` user.
+    2.  Clicked the "Assign Team" button on a project card.
+    3.  **Outcome**: Verified that the list of users in the assignment dialog *only* contained users with the "Developer" role. The fix was confirmed successful.
     
