@@ -56,19 +56,14 @@ export default function DashboardPage() {
    * It fetches the latest user, developer, project, and document lists.
    */
   const loadData = useCallback(async () => {
-    // If the auth state is still loading, we can't proceed.
-    if (isLoading) return;
-
     try {
       // Load projects and documents from either localStorage or the initial state.
-      // This logic remains to persist data for a user's session.
       const savedProjects = localStorage.getItem("appProjects");
       const savedDocs = localStorage.getItem("appDocuments");
       setProjects(savedProjects ? JSON.parse(savedProjects) : initialProjects);
       setDocuments(savedDocs ? JSON.parse(savedDocs) : initialDocuments);
       
       // Fetch the latest lists of all users and just developers from the "server".
-      // This is the critical part that now runs every time `loadData` is called.
       const allUsers = await getAllUsers();
       const developerUsers = await getDevelopers();
       setUsers(allUsers);
@@ -83,7 +78,7 @@ export default function DashboardPage() {
       // Mark data as loaded to render the UI.
       setIsDataLoaded(true);
     }
-  }, [isLoading]);
+  }, []);
 
   // Load data when the component mounts or auth state changes.
   useEffect(() => {
@@ -196,9 +191,6 @@ export default function DashboardPage() {
      *   projects they are merely assigned to as a developer.
      */
     const canManageProject = user?.role === 'admin' || (user?.role === 'project-lead' && user.username === project.lead);
-    
-    // Determine if the "Assign Team" button should be shown. Only for the assigned Project Lead or an Admin.
-    const canAssignTeam = user?.role === 'admin' || (user?.role === 'project-lead' && user.username === project.lead);
 
     return (
       <Card className="flex flex-col">
@@ -245,7 +237,7 @@ export default function DashboardPage() {
         </CardContent>
         <CardFooter className="grid grid-cols-2 gap-2">
             {/* [PERMISSIONS] "Assign Team" button is for Admins and Project Leads on their projects. */}
-            {canAssignTeam && (
+            {canManageProject && (
                 <Dialog open={assignTeamProjectId === project.id} onOpenChange={(isOpen) => setAssignTeamProjectId(isOpen ? project.id : null)}>
                   <DialogTrigger asChild>
                       <Button variant="outline"><UserPlus className="mr-2"/> Assign Team</Button>
