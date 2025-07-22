@@ -8,7 +8,7 @@ import Link from "next/link";
  * 
  * @description
  * This is the main entry point for unauthenticated users. It displays the
- * company logo, a welcome message, the login form, and a link to the signup page.
+ * company logo, a welcome message, and the login form.
  */
 export default function LoginPage() {
   return (
@@ -28,15 +28,6 @@ export default function LoginPage() {
         {/* The main login form component */}
         <LoginForm />
 
-        {/* Link for users who don't have an account yet */}
-        <p className="px-8 text-center text-sm text-muted-foreground mt-8">
-          <Link
-            href="/signup"
-            className="underline underline-offset-4 hover:text-primary"
-          >
-            Don&apos;t have an account? Sign Up
-          </Link>
-        </p>
       </div>
     </main>
   );
