@@ -84,7 +84,7 @@ export default function DashboardLayout({
             >
               <Logo />
               {/* The app name is hidden when the sidebar is collapsed. */}
-              <span className={cn(isCollapsed && "hidden")}>MediTask</span>
+              <span className={cn(isCollapsed && "hidden")}>PixelForge Nexus</span>
             </a>
           </div>
           <div className="flex-1 overflow-auto py-2">
@@ -127,7 +127,7 @@ export default function DashboardLayout({
                   className="flex items-center gap-2 font-semibold font-headline"
                 >
                   <Logo />
-                  <span className="">MediTask</span>
+                  <span className="">PixelForge Nexus</span>
                 </a>
               </div>
               <SidebarNav isCollapsed={false} />

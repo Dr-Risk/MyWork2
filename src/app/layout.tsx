@@ -37,8 +37,8 @@ const spaceGrotesk = Space_Grotesk({
 
 // Metadata for the application, used for SEO and the browser tab title.
 export const metadata: Metadata = {
-  title: "MediTask",
-  description: "Task management for healthcare workers.",
+  title: "PixelForge Nexus",
+  description: "Your creative hub for all things pixels.",
 };
 
 export default function RootLayout({

@@ -18,7 +18,7 @@ export default function LoginPage() {
         <div className="flex flex-col items-center justify-center mb-8">
           <Logo />
           <h1 className="text-4xl font-headline font-bold text-center mt-4">
-            MediTask
+            PixelForge Nexus
           </h1>
           <p className="text-muted-foreground text-center mt-2">
             Welcome back! Please log in to your account.

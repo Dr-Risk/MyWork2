@@ -21,7 +21,7 @@ export default function SignupPage() {
             Create Account
           </h1>
           <p className="text-muted-foreground text-center mt-2">
-            Enter your details to get started with MediTask.
+            Enter your details to get started with PixelForge Nexus.
           </p>
         </div>
         

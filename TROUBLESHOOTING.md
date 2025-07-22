@@ -81,7 +81,7 @@ A series of security audits identified several vulnerabilities related to authen
 
 A comprehensive security hardening pass was performed, resulting in the following fixes:
 
-1.  **Weak Default Passwords**: The initial default password ('meditask') was a simple dictionary word. This was updated to `DefaultPassword123` across the mock database to better align with NIST password guidelines (favoring length over arbitrary complexity rules).
+1.  **Weak Default Passwords**: The initial default password was a simple dictionary word. This was updated to `DefaultPassword123` across the mock database to better align with NIST password guidelines (favoring length over arbitrary complexity rules).
 2.  **Missing Server-Side Validation**: The `checkCredentials` function in `src/lib/auth.ts` lacked validation for input format, trusting the client-side checks. This was a critical flaw, as client-side validation can be bypassed. Strict Zod schemas were added on the server to mirror and enforce client-side rules for usernames and passwords.
 3.  **SQL Injection Vector**: The server-side username validation was initially too permissive, allowing characters commonly used in SQL injection (SQLi) attacks. The validation was hardened using a strict "allow-list" regular expression (`/^[a-zA-Z0-9_.-]+$/`). This ensures that only safe characters can be processed by the backend.
 4.  **Admin Backdoor**: A special case in the authentication logic in `src/lib/auth.ts` allowed the `moqadri` admin user to bypass the account lockout mechanism. This backdoor was removed entirely, ensuring all accounts (including admins) are subject to the same security controls for failed login attempts.
