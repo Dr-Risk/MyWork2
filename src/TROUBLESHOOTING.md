@@ -3,6 +3,38 @@
 
 This document tracks significant issues encountered during development, their resolution, and the testing strategies employed to ensure application quality and security.
 
+## Issue: No Ability to Delete Documents & Missing Access Control (Solved)
+
+### Description
+Following the implementation of document uploads, a critical feature was missing: the ability to delete uploaded documents. This presented two significant problems:
+1.  **Data Management Failure**: There was no way for users to remove incorrect, outdated, or sensitive documents from a project, leading to data clutter and potential compliance issues.
+2.  **Inherent Security Risk**: Even if a delete function existed, there were no access controls defined for it. This created a high risk that an unauthorized user (e.g., a Developer) could have been given the ability to delete critical project files, compromising data integrity.
+
+### Root Cause Analysis & Fixes
+The issue was a feature omission during the initial implementation of document handling. The focus was on uploading and viewing, and the delete functionality was overlooked.
+
+**Final Solution**: A secure delete feature was implemented with strict role-based access control:
+1.  **Delete Handler**: A `handleDeleteDocument` function was created in `src/app/dashboard/page.tsx` to handle the logic of removing a document from the application's state.
+2.  **Confirmation Dialog**: To prevent accidental deletions, the delete action is wrapped in an `AlertDialog` component. This requires the user to explicitly confirm their choice before the document is permanently removed.
+3.  **Role-Based Access Control (RBAC)**: A new "Delete" button (using a `Trash2` icon) was added to each document item in the `ProjectCard`. The visibility of this button is strictly controlled by the existing `canManageDocs` permission flag. This ensures that **only** users with the `admin` role or the designated `project-lead` for that specific project can see and use the delete button.
+
+### Testing Strategy
+-   **Integration Testing**:
+    -   Verified that the `AlertDialog` component correctly triggers the `handleDeleteDocument` function upon confirmation.
+    -   Confirmed that the `handleDeleteDocument` function successfully filters the document from the `documents` state array and that this change is correctly persisted to `localStorage`.
+
+-   **Manual UAT (User Acceptance Testing) - Role Paths**:
+    1.  **Admin Path**: Logged in as an `admin`. Uploaded a document. Verified the "Delete" button was visible. Clicked "Delete," confirmed the dialog appeared, and successfully deleted the document. Verified the document was removed from the UI and `localStorage`.
+    2.  **Project Lead Path**: Logged in as a `project-lead`. Navigated to a project they lead. Uploaded a document. Verified the "Delete" button was visible and functional. Navigated to a project they *do not* lead and verified the button was **not** visible.
+    3.  **Developer Path**: Logged in as a `developer`. Navigated to their assigned project. Verified that the "Delete" button was **not** visible for any documents.
+
+-   **Post-Fix Regression Testing**:
+    -   Confirmed that viewing and downloading documents were unaffected by the changes.
+    -   Confirmed that other role-based actions (like "Assign Team" or "Mark as Complete") were still functioning correctly.
+
+**Outcome**: The issue is fully resolved. Document deletion is now a functional, secure, and intuitive part of the application, adhering to the principle of least privilege.
+
+
 ## Issue: Document Uploads Not Persisting or Displaying Correctly (Solved)
 
 ### Description
@@ -104,7 +136,7 @@ A series of security audits identified several vulnerabilities related to authen
 ## Issue: Stale User Data in "Add Project" Form (Solved)
 
 ### Description
-When an admin created a new user, that new user would not immediately appear in the "Project Lead" dropdown list when creating a new project. The admin had to manually refresh the page for the list to update. This was a persistent issue that required multiple fixes.
+When an admin created a new user, that new user would not immediately appear in the "Project Lead" dropdown list when creating a new project. This was a persistent issue that required multiple fixes.
 
 ### Root Cause Analysis & Fixes
 This was a classic client-side state management issue, compounded by a subtle logic error.
