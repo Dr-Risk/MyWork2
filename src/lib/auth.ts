@@ -47,28 +47,6 @@ const users: { [key: string]: UserWithPassword } = {
     loginAttempts: 0,
     isLocked: false,
     passwordLastChanged: new Date().toISOString(),
-  },
-  'jane_lead': {
-    username: 'jane_lead',
-    passwordHash: 'DefaultPassword123_hashed',
-    role: 'project-lead',
-    name: 'Jane Lead',
-    initials: 'JL',
-    email: 'jane.lead@example.com',
-    loginAttempts: 0,
-    isLocked: false,
-    passwordLastChanged: new Date().toISOString(),
-  },
-  'dev_squad': {
-    username: 'dev_squad',
-    passwordHash: 'DefaultPassword123_hashed',
-    role: 'developer',
-    name: 'Dev Squad',
-    initials: 'DS',
-    email: 'dev.squad@example.com',
-    loginAttempts: 0,
-    isLocked: false,
-    passwordLastChanged: new Date().toISOString(),
   }
 };
 

@@ -33,8 +33,8 @@ export const initialProjects: Project[] = [
     description: "A next-gen open-world RPG with dynamic storytelling.",
     deadline: "2025-12-31",
     status: "Active",
-    lead: 'jane_lead',
-    assignedDevelopers: ['dev_squad'],
+    lead: 'moqadri',
+    assignedDevelopers: [],
   },
   {
     id: 2,
@@ -42,7 +42,7 @@ export const initialProjects: Project[] = [
     description: "A retro-style arcade racing game for mobile platforms.",
     deadline: "2024-10-15",
     status: "Active",
-    lead: 'jane_lead',
+    lead: 'moqadri',
     assignedDevelopers: [],
   },
   {
@@ -52,7 +52,7 @@ export const initialProjects: Project[] = [
     deadline: "2024-08-01",
     status: "Completed",
     lead: 'moqadri',
-    assignedDevelopers: ['dev_squad'],
+    assignedDevelopers: [],
   },
 ];
 
