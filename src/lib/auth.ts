@@ -237,8 +237,7 @@ export const checkCredentials = async (username: string, pass: string): Promise<
   const isPasswordCorrect = await verifyPassword(pass, user.passwordHash);
 
   if (!isPasswordCorrect) {
-    // [SECURITY] Admin Account Protection
-    // Do not increment login attempts or lock the account if the user is an admin.
+    // [SECURITY] Brute-Force Prevention: Increment login attempts for non-admins.
     if (user.role !== 'admin') {
       user.loginAttempts++;
       if (user.loginAttempts >= MAX_LOGIN_ATTEMPTS) {
@@ -249,7 +248,8 @@ export const checkCredentials = async (username: string, pass: string): Promise<
     return { status: 'invalid', message: 'Invalid username or password.' };
   }
   
-  // 5. Check for password expiration, but only for non-admin users.
+  // 5. [SECURITY] Password Expiration: Check for non-admin users.
+  // The admin account is exempt from password expiration rules.
   const ninetyDaysAgo = new Date();
   ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
   if (user.role !== 'admin' && new Date(user.passwordLastChanged) < ninetyDaysAgo) {
@@ -285,9 +285,14 @@ export const getUsers = async (): Promise<SanitizedUser[]> => {
 
 /**
  * Retrieves a list of users who are developers.
+ * @description This function specifically filters for users with the 'developer' role.
+ * It is used to populate the "Assign Team" dialog, ensuring that only developers
+ * can be assigned to projects, as per the application requirements.
+ * @returns {Promise<SanitizedUser[]>} A promise that resolves to an array of developer users.
  */
 export const getDevelopers = async (): Promise<SanitizedUser[]> => {
   const allUsers = await getUsers();
+  // Filter for users whose role is exactly 'developer'.
   return allUsers.filter(u => u.role === 'developer');
 }
 
@@ -414,4 +419,6 @@ export const removeUser = async (
     console.log(`User '${username}' removed from mock database.`);
     return { success: true, message: "User removed successfully." };
 };
+    
+
     

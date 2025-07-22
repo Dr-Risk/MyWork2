@@ -35,7 +35,8 @@ const formSchema = z.object({
 });
 
 type AddProjectFormProps = {
-  projectLeads: SanitizedUser[]; // An array of users who can be assigned as leads.
+  // An array of users who can be assigned as leads.
+  projectLeads: SanitizedUser[];
   // Callback function to execute when the form is successfully submitted.
   onSubmit: (data: Omit<Project, 'id' | 'status' | 'assignedDevelopers'>) => void;
 };
@@ -103,7 +104,7 @@ export function AddProjectForm({ projectLeads, onSubmit }: AddProjectFormProps) 
                 <FormControl>
                   <SelectTrigger>
                     <SelectValue placeholder="Select a project lead" />
-                  </SelectTrigger>
+                  </Trigger>
                 </FormControl>
                 <SelectContent>
                   {/* Populate the dropdown with the list of available project leads */}
@@ -138,4 +139,3 @@ export function AddProjectForm({ projectLeads, onSubmit }: AddProjectFormProps) 
     </Form>
   );
 }
-

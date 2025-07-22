@@ -183,7 +183,17 @@ export default function DashboardPage() {
     const assignedDevsList = users.filter(u => project.assignedDevelopers.includes(u.username));
     const projectLead = users.find(u => u.username === project.lead);
     
-    // [PERMISSIONS] Determine if the current user has lead/admin privileges over this project.
+    /**
+     * [SECURITY] Role-Based Access Control (RBAC) Logic
+     * This variable determines if the current user has management privileges
+     * over this specific project (assigning teams, uploading documents).
+     *
+     * Rules:
+     * - 'admin': Admins have universal management rights over all projects.
+     * - 'project-lead': Project Leads can only manage projects where their
+     *   `username` matches the project's `lead` field. They cannot manage
+     *   projects they are merely assigned to as a developer.
+     */
     const canManageProject = user?.role === 'admin' || (user?.role === 'project-lead' && user.username === project.lead);
 
     return (
@@ -230,7 +240,7 @@ export default function DashboardPage() {
           </div>
         </CardContent>
         <CardFooter className="grid grid-cols-2 gap-2">
-            {/* Conditional rendering for Admin and Project Lead actions */}
+            {/* [PERMISSIONS] Show management buttons only if canManageProject is true. */}
             {canManageProject && (
                 <>
                     <Dialog open={assignTeamProjectId === project.id} onOpenChange={(isOpen) => setAssignTeamProjectId(isOpen ? project.id : null)}>
@@ -243,8 +253,8 @@ export default function DashboardPage() {
                               <DialogDescription>Select developers to add to this project.</DialogDescription>
                           </DialogHeader>
                           <AssignTeamForm 
-                            // Filter out developers who are already assigned.
-                            developers={developers.filter(d => !project.assignedDevelopers.includes(d.username))} 
+                            // Pass only users with the 'developer' role to the form.
+                            developers={developers} 
                             onSubmit={(devs) => handleAssignTeam(project.id, devs)}
                           />
                       </DialogContent>
@@ -257,7 +267,7 @@ export default function DashboardPage() {
                 </>
             )}
             
-            {/* "Mark as Complete" is still admin-only and only for active projects. */}
+            {/* [PERMISSIONS] The "Mark as Complete" action is strictly admin-only. */}
             {user?.role === 'admin' && project.status === 'Active' && (
                  <Button variant="default" onClick={() => handleCompleteProject(project.id)} className="col-span-2">
                     <CheckCircle2 className="mr-2"/> Mark as Complete
@@ -274,13 +284,14 @@ export default function DashboardPage() {
   const getVisibleProjects = () => {
     if (!user) return [];
     switch (user.role) {
+      // Admins see all projects.
       case 'admin':
-        return projects; // Admins see all projects.
+        return projects;
+      // Project Leads see projects they lead OR are assigned to as a developer.
       case 'project-lead':
-        // Project Leads see projects they lead or are assigned to as a developer.
         return projects.filter(p => p.lead === user.username || p.assignedDevelopers.includes(user.username));
+      // Developers only see projects they are assigned to.
       case 'developer':
-        // Developers only see projects they are assigned to.
         return projects.filter(p => p.assignedDevelopers.includes(user.username));
       default:
         return [];
@@ -305,7 +316,7 @@ export default function DashboardPage() {
             Welcome, {user?.name}. Here are the projects you have access to.
           </p>
         </div>
-        {/* Admin-only controls for adding users and projects */}
+        {/* [PERMISSIONS] Admin-only controls for adding users and projects. */}
         {user?.role === 'admin' && (
             <div className="flex gap-2">
                  <Dialog open={isAddUserDialogOpen} onOpenChange={setIsAddUserDialogOpen}>
@@ -331,8 +342,8 @@ export default function DashboardPage() {
                             <DialogDescription>Fill in the details for the new game project.</DialogDescription>
                         </DialogHeader>
                         <AddProjectForm 
-                          // Pass the list of potential leads to the form.
-                          projectLeads={users.filter(u => u.role !== 'admin')} 
+                          // Pass users with 'project-lead' role to the form.
+                          projectLeads={users.filter(u => u.role === 'project-lead')} 
                           onSubmit={handleAddProject} 
                         />
                     </DialogContent>
@@ -358,3 +369,5 @@ export default function DashboardPage() {
     </>
   );
 }
+
+    

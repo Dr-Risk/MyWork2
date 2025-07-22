@@ -62,20 +62,16 @@ export default function AllProjectsPage() {
   
   /**
    * Loads all necessary data from the mock backend.
-   * It clears any existing data from localStorage to ensure the view is fresh
-   * and then fetches all projects, documents, and users.
+   * It fetches the latest project, document, and user data from localStorage or initial state.
    */
   useEffect(() => {
     async function loadData() {
         if (isAuthLoading) return;
         try {
-            // Always start with a clean slate by clearing localStorage.
-            localStorage.removeItem("appProjects");
-            localStorage.removeItem("appDocuments");
-            
-            // Set data from the initial in-memory source.
-            setProjects(initialProjects);
-            setDocuments(initialDocuments);
+            const savedProjects = localStorage.getItem("appProjects");
+            const savedDocs = localStorage.getItem("appDocuments");
+            setProjects(savedProjects ? JSON.parse(savedProjects) : initialProjects);
+            setDocuments(savedDocs ? JSON.parse(savedDocs) : initialDocuments);
             
             const allUsers = await getAllUsers();
             setUsers(allUsers);
@@ -91,15 +87,16 @@ export default function AllProjectsPage() {
   }, [isAuthLoading]);
 
   /**
-   * Persists project data to localStorage whenever it changes.
+   * Persists project and document data to localStorage whenever it changes.
    * This ensures that any modifications (like completing or deleting a project)
    * are saved for the user's session.
    */
   useEffect(() => {
     if (isDataLoaded) {
       localStorage.setItem("appProjects", JSON.stringify(projects));
+      localStorage.setItem("appDocuments", JSON.stringify(documents));
     }
-  }, [projects, isDataLoaded]);
+  }, [projects, documents, isDataLoaded]);
 
   /**
    * Handles marking a project as "Completed".
@@ -110,10 +107,12 @@ export default function AllProjectsPage() {
   };
 
   /**
-   * Handles permanently deleting a project.
+   * Handles permanently deleting a project and its associated documents.
+   * [PERMISSIONS] This is an admin-only action.
    */
   const handleDeleteProject = (projectId: number) => {
     setProjects(prev => prev.filter(p => p.id !== projectId));
+    setDocuments(prev => prev.filter(d => d.projectId !== projectId));
     toast({ variant: "destructive", title: "Project Deleted", description: "The project has been permanently removed." });
   };
   
@@ -168,14 +167,14 @@ export default function AllProjectsPage() {
             )}
           </div>
         </CardContent>
-        <CardFooter>
-            {/* Show "Mark as Complete" button for active projects. */}
+        <CardFooter className="grid grid-cols-1 gap-2">
+            {/* [PERMISSIONS] Show "Mark as Complete" button for active projects. Admin only. */}
             {user?.role === 'admin' && project.status === 'Active' && (
                  <Button variant="default" onClick={() => handleCompleteProject(project.id)} className="w-full">
                     <CheckCircle2 className="mr-2"/> Mark as Complete
                 </Button>
             )}
-            {/* Show "Delete Project" button for completed projects. */}
+            {/* [PERMISSIONS] Show "Delete Project" button for completed projects. Admin only. */}
              {user?.role === 'admin' && project.status === 'Completed' && (
                 <AlertDialog>
                     <AlertDialogTrigger asChild>
@@ -187,7 +186,7 @@ export default function AllProjectsPage() {
                         <AlertDialogHeader>
                         <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
                         <AlertDialogDescription>
-                            This action cannot be undone. This will permanently delete the project "{project.name}".
+                            This action cannot be undone. This will permanently delete the project "{project.name}" and all of its documents.
                         </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
@@ -248,3 +247,5 @@ export default function AllProjectsPage() {
     </>
   );
 }
+
+    
