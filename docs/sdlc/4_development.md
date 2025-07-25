@@ -22,9 +22,34 @@ The development process adhered to several key secure coding practices to minimi
   });
   ```
 
+- **Cross-Site Scripting (XSS) Prevention**: The application is built with React and Next.js, which provide strong, default protection against XSS attacks. Data rendered in JSX is automatically escaped, converting dangerous characters like `<` and `>` into strings. This prevents attacker-supplied code from being executed in the user's browser.
+
+  **Example from `src/app/dashboard/page.tsx`**:
+  ```tsx
+  // When rendering a project name, React ensures the content is treated as text.
+  // If `project.name` contained "<script>alert('XSS')</script>", React would
+  // render the literal string, not execute the script.
+  <CardTitle className="font-headline text-xl">{project.name}</CardTitle>
+  ```
+
+- **Server-Side Access Control**: All sensitive actions are validated on the server-side logic to ensure the user has the correct permissions, preventing unauthorized actions even if a user bypasses client-side UI restrictions.
+
+    **Example from `src/lib/auth.ts`**:
+    ```typescript
+    // This server-side check prevents anyone from changing an admin's role.
+    export const updateUserRole = async (username: string, newRole: 'project-lead' | 'developer') => {
+      // ...
+      // [SECURITY] Access Control (OWASP A01)
+      if (user.role === 'admin') {
+        return { success: false, message: 'Cannot change the role of an admin user.' };
+      }
+      // ... proceed with role change
+    };
+    ```
+
 - **Strong Typing**: The project is developed using **TypeScript**. This helps prevent a wide range of common JavaScript errors, such as type coercion bugs, null pointer exceptions, and undefined properties, which can sometimes lead to security vulnerabilities.
 
-- **Error Handling**: The application avoids leaking sensitive information in error messages. Generic error messages are sent to the client (e.g., "Invalid username or password"), while detailed error information is logged to the console (simulating server-side logs) for debugging purposes. This is handled in the `checkCredentials` function in `src/lib/auth.ts`.
+- **Error Handling**: The application avoids leaking sensitive information in error messages. Generic error messages are sent to the client (e.g., "Invalid username or password"), while detailed error information is logged to the console (simulating server-side logs) for debugging purposes using our centralized `logger.ts` service. This is handled in the `checkCredentials` function in `src/lib/auth.ts`.
 
 - **Separation of Concerns**: The codebase is logically separated. UI components (`/components`) are distinct from business logic (`/lib`) and global state (`/context`). This makes the code easier to review for security flaws and maintain over time.
 
