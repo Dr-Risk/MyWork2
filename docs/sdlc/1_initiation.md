@@ -24,7 +24,7 @@ This document outlines the initiation phase for the PixelForge Nexus project, es
     - Financial or billing features.
 
 ### Strategy
-- **Development Methodology**: An iterative approach, allowing for continuous feedback and refinement of security controls and features.
+- **Development Methodology**: The project follows an **iterative Agile SDLC model**. This approach allows for continuous feedback, rapid development cycles, and the refinement of security controls and features throughout the project's lifecycle, rather than treating them as a separate phase.
 - **Technology Stack**: Next.js (React), TypeScript, Tailwind CSS, ShadCN for UI components, and Genkit for potential AI features. This stack was chosen for its modern features, performance, and strong community support.
 
 ## 1.2 Initial Security Requirements
