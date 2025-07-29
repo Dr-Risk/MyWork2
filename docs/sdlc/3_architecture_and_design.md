@@ -12,8 +12,9 @@ The application is designed as a modern, client-server web application.
 - **Data Flow**: The client-side components make asynchronous calls to the "server" functions in `src/lib/`. These functions read from and write to the `users.json` file (for user data) or browser `localStorage` (for project data), simulating a full-stack data flow.
 
 ### Integration with Existing Infrastructure
-- The application is self-contained. It requires a Node.js environment for running the Next.js server.
-- Environment variables (for services like Genkit) are managed via a `.env.local` file, separating configuration from code.
+- **Self-Contained Application**: The application is designed to be largely self-contained. This means it does not have complex dependencies on other enterprise systems, such as a separate corporate user directory or a dedicated database server. All logic for handling users and projects is included within the application's own codebase.
+- **Node.js Runtime Environment**: The fundamental infrastructure requirement is a **Node.js environment**. Next.js is a framework that runs on Node.js, which allows it to execute JavaScript on the server to handle API requests, render pages, and run the business logic defined in `src/lib/`. The application cannot run without it.
+- **Environment Variables for Configuration**: The primary method for integrating with external services (like Google AI for Genkit) is through environment variables. These are managed in a `.env.local` file for local development. This approach separates sensitive configuration (like API keys) from the source code, which is a critical security and operational best practice.
 
 ### Security by Design Principles
 The architecture is founded on core security principles:
