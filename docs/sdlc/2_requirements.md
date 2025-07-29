@@ -1,3 +1,4 @@
+
 # SDLC Stage 2: Requirements
 
 This document details the functional and non-functional requirements for the PixelForge Nexus application, derived from the objectives set in the Initiation phase. It also includes a more detailed risk analysis and the definitive security requirements.
@@ -18,6 +19,8 @@ Functional requirements define what the system must *do*.
 | **FR-08** | A Developer shall only be able to view projects and documents they are assigned to. | Developer | Must Have |
 | **FR-09** | Users shall be able to update their own profile information (name, email). | All | Should Have |
 | **FR-10** | Users shall be able to change their own password. | All | Should Have |
+| **FR-11** | The system shall force a new user to change their default password upon first login. | All | Must Have |
+
 
 ## 2.2 Non-Functional Requirements (NFR)
 
@@ -59,3 +62,4 @@ These are the definitive, testable security requirements that will be implemente
 | **SR-05** | **Generic Authentication Errors**: The login system must return an identical, generic error message whether the username does not exist or the password is incorrect. |
 | **SR-06** | **Confirmation for Destructive Actions**: The UI must require explicit user confirmation before executing any irreversible action, such as deleting a user, project, or document. |
 | **SR-07** | **Secure Defaults**: Self-registration will be disabled. New users can only be created by an administrator, establishing a secure default posture. |
+| **SR-08** | **Forced Password Change**: A new user created by an admin must be forced to change their default password upon their first successful login. |

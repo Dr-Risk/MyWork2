@@ -45,7 +45,7 @@ const UpdateUserPasswordSchema = z.object({
 });
 
 export function ProfilePasswordForm() {
-  const { user } = useAuth(); // Access the current user's data from the context.
+  const { user, setUser } = useAuth(); // Access the current user's data from the context.
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
@@ -80,7 +80,9 @@ export function ProfilePasswordForm() {
         title: "Password Changed",
         description: "Your password has been updated successfully.",
       });
-      form.reset(); // Clear the form fields on success.
+      // Clear the user from context to force re-login
+      setUser(null);
+      router.push('/');
     } else {
       // If the update fails (e.g., incorrect current password), show an error toast.
       toast({
@@ -141,7 +143,7 @@ export function ProfilePasswordForm() {
         />
         <Button type="submit" disabled={isLoading}>
           {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          Change Password
+          Change Password & Log Out
         </Button>
       </form>
     </Form>

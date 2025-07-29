@@ -4,7 +4,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { updateUserPasswordWithTempToken } from "@/lib/auth"; // We will create this new function
 
 /**
  * @fileoverview Change Password Form Component
@@ -34,18 +35,9 @@ import { cn } from "@/lib/utils";
  * @description
  * This component provides a form for a user to set a new password. It's used
  * on the dedicated `/change-password` page, which is shown when a user's
- * password has expired. It includes validation to ensure the new password
- * meets length requirements and that the two password fields match.
+ * password has expired or must be changed on first login.
  */
 
-/**
- * Zod schema defines the structure and validation rules for the form.
- * - `newPassword`: Must be at least 8 characters.
- * - `confirmPassword`: Must be at least 8 characters.
- * - `refine`: A cross-field validation check to ensure the `newPassword` and
- *   `confirmPassword` fields are identical. If they don't match, an error
- *   is attached to the `confirmPassword` field.
- */
 const formSchema = z.object({
   newPassword: z.string().min(8, {
     message: "Password must be at least 8 characters.",
@@ -55,15 +47,15 @@ const formSchema = z.object({
   }),
 }).refine((data) => data.newPassword === data.confirmPassword, {
   message: "Passwords do not match.",
-  path: ["confirmPassword"], // The error will be displayed on the confirmPassword field.
+  path: ["confirmPassword"],
 });
 
 export function ChangePasswordForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
 
-  // Initialize react-hook-form with the Zod schema for validation.
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     mode: "onTouched",
@@ -75,32 +67,44 @@ export function ChangePasswordForm() {
 
   const newPasswordValue = form.watch("newPassword");
 
-  /**
-   * Handles the form submission after successful client-side validation.
-   * @param {object} values - The validated form values.
-   */
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
     
-    /**
-     * [SECURITY] In a real application, you would make an API call here to a secure
-     * server endpoint to update the user's password. The server would then perform
-     * its own validation, hash the new password using a strong algorithm like Argon2
-     * or bcrypt, and store the new hash in the database.
-     */
-    console.log("New password (would be hashed on server):", values.newPassword);
+    // For this flow, we assume the backend has provided a temporary, single-use
+    // token that proves the user is allowed to change their password without
+    // providing the old one. In a real app, this token would be sent to the user's
+    // email or passed securely. For this prototype, we'll use the username from the
+    // login response as a stand-in for this token.
+    const tempAuthToken = searchParams.get('user'); // This would be a real token in production
+
+    if (!tempAuthToken) {
+        toast({
+            variant: "destructive",
+            title: "Invalid Request",
+            description: "No temporary authentication token found. Please log in again.",
+        });
+        router.push("/");
+        setIsLoading(false);
+        return;
+    }
+
+    const response = await updateUserPasswordWithTempToken(tempAuthToken, values.newPassword);
     
-    // Simulate a network delay to mimic an API call.
-    await new Promise((resolve) => setTimeout(resolve, 1000));
     setIsLoading(false);
 
-    toast({
-        title: "Password Changed Successfully",
-        description: "Please log in with your new password.",
-    });
-    
-    // Redirect the user to the login page to sign in with their new credentials.
-    router.push("/");
+    if (response.success) {
+      toast({
+          title: "Password Changed Successfully",
+          description: "Please log in with your new password.",
+      });
+      router.push("/");
+    } else {
+      toast({
+          variant: "destructive",
+          title: "Update Failed",
+          description: response.message,
+      });
+    }
   }
 
   return (

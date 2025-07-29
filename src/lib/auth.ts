@@ -107,6 +107,12 @@ interface UserWithPassword extends UserProfile {
      * The secret key for TOTP, stored encrypted in a real database.
      */
     mfaSecret?: string;
+
+    /**
+     * [SECURITY] Force Password Change on First Login
+     * A flag to require a user to change their default password.
+     */
+    mustChangePassword?: boolean;
 }
 
 /**
@@ -218,6 +224,7 @@ export const createUser = async (
         isLocked: false,
         passwordLastChanged: new Date().toISOString(),
         mfaEnabled: false,
+        mustChangePassword: true, // Force password change on first login.
     };
     await writeUsers(users);
 
@@ -246,6 +253,7 @@ export type AuthResponse =
     | { status: 'invalid'; message: string }
     | { status: 'locked'; message: string }
     | { status: 'expired'; message: string }
+    | { status: 'must_change_password'; message: string }
     | { status: 'mfa_required'; message: string; user: Pick<UserProfile, 'username' | 'mfaEnabled'> };
 
 /**
@@ -308,7 +316,13 @@ export const checkCredentials = async (username: string, pass: string): Promise<
     return { status: 'invalid', message: 'Invalid username or password.' };
   }
   
-  // 5. [SECURITY] Password Expiration: Check for non-admin users.
+  // 5. Check if the user must change their password.
+  if (user.mustChangePassword) {
+    logger.info(`User '${username}' must change their password.`);
+    return { status: 'must_change_password', message: 'You must change your password before continuing.' };
+  }
+
+  // 6. [SECURITY] Password Expiration: Check for non-admin users.
   // The admin account is exempt from password expiration rules.
   const ninetyDaysAgo = new Date();
   ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
@@ -317,21 +331,21 @@ export const checkCredentials = async (username: string, pass: string): Promise<
     return { status: 'expired', message: 'Your password has expired. Please change it to continue.' };
   }
 
-  // 6. Check if MFA is enabled
+  // 7. Check if MFA is enabled
   if (user.mfaEnabled) {
       logger.info(`MFA required for user: ${username}`);
-      const { passwordHash, loginAttempts, isLocked, passwordLastChanged, mfaSecret, ...userProfile } = user;
+      const { passwordHash, loginAttempts, isLocked, passwordLastChanged, mfaSecret, mustChangePassword, ...userProfile } = user;
       return { status: 'mfa_required', message: 'MFA is required.', user: { username: userProfile.username, mfaEnabled: userProfile.mfaEnabled } };
   }
 
-  // 7. On success, reset login attempts and prepare the user profile to be returned.
+  // 8. On success, reset login attempts and prepare the user profile to be returned.
   logger.info(`Successful login for user: ${username}`);
   user.loginAttempts = 0;
   await writeUsers(users);
   
   // [SECURITY] Data Minimization
   // Only return the non-sensitive UserProfile, not the internal UserWithPassword.
-  const { passwordHash, loginAttempts, isLocked, passwordLastChanged, mfaSecret, ...userProfile } = user;
+  const { passwordHash, loginAttempts, isLocked, passwordLastChanged, mfaSecret, mustChangePassword, ...userProfile } = user;
   
   return { status: 'success', user: userProfile };
 }
@@ -404,7 +418,7 @@ export const updateUserProfile = async (
   await writeUsers(users);
 
   logger.info(`User '${username}' profile updated.`);
-  const { passwordHash, loginAttempts, isLocked, passwordLastChanged, mfaSecret, ...userProfile } = user;
+  const { passwordHash, loginAttempts, isLocked, passwordLastChanged, mfaSecret, mustChangePassword, ...userProfile } = user;
   return { success: true, message: 'Profile updated successfully.', user: userProfile };
 };
 
@@ -429,7 +443,11 @@ export const updateUserPassword = async (
     }
 
     user.passwordHash = `${newPass}_hashed`; // MOCK HASHING
-    user.passwordLastChanged = new Date().toISOString(); 
+    user.passwordLastChanged = new Date().toISOString();
+    // After a successful password change, clear the force change flag.
+    if (user.mustChangePassword) {
+        user.mustChangePassword = false;
+    }
     await writeUsers(users);
 
     logger.info(`User '${username}' password updated successfully.`);
@@ -544,7 +562,7 @@ export const confirmMfa = async (username: string, token: string): Promise<{ suc
     await writeUsers(users);
 
     logger.info(`MFA enabled for user '${username}'.`);
-    const { passwordHash, loginAttempts, isLocked, passwordLastChanged, mfaSecret, ...userProfile } = user;
+    const { passwordHash, loginAttempts, isLocked, passwordLastChanged, mfaSecret, mustChangePassword, ...userProfile } = user;
     return { success: true, message: 'MFA enabled successfully!', user: userProfile };
 };
 
@@ -561,7 +579,7 @@ export const disableMfa = async (username: string): Promise<{ success: boolean; 
     await writeUsers(users);
 
     logger.info(`MFA disabled for user '${username}'.`);
-    const { passwordHash, loginAttempts, isLocked, passwordLastChanged, mfaSecret, ...userProfile } = user;
+    const { passwordHash, loginAttempts, isLocked, passwordLastChanged, mfaSecret, mustChangePassword, ...userProfile } = user;
     return { success: true, message: 'MFA has been disabled.', user: userProfile };
 };
 
@@ -589,6 +607,6 @@ export const loginWithMfa = async (username: string, token: string): Promise<Aut
     await writeUsers(users);
     
     logger.info(`Successful MFA login for user: ${username}`);
-    const { passwordHash, loginAttempts, isLocked, passwordLastChanged, mfaSecret, ...userProfile } = user;
+    const { passwordHash, loginAttempts, isLocked, passwordLastChanged, mfaSecret, mustChangePassword, ...userProfile } = user;
     return { status: 'success', user: userProfile };
 }
