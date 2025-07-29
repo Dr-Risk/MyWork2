@@ -80,26 +80,6 @@ A multi-layered testing approach was used to validate the final fix.
 
 **Outcome**: The issue is now fully resolved. All user roles can reliably upload, view, download, and persist documents across sessions.
 
-## Major Feature Pivot: Healthcare App to Game Dev Project Manager (Solved)
-
-### Description
-The entire application was pivoted from its original concept as a healthcare task manager ("MediTask") to a game development project management tool ("PixelForge Nexus"). This required a complete overhaul of data models, user roles, UI/UX, and core application logic.
-
-### Solution
-A systematic rewrite was performed:
-1.  **Data Models**: The `Task` model in `src/lib/tasks.ts` was replaced with `Project` and `Document` models in `src/lib/projects.ts`.
-2.  **User Roles**: User roles in `src/lib/auth.ts` were changed from `admin`, `full-time`, `contractor` to `admin`, `project-lead`, `developer`.
-3.  **UI Overhaul**:
-    *   The main dashboard (`src/app/dashboard/page.tsx`) was rebuilt to display a list of projects instead of tasks.
-    *   Role-based functionality was implemented: Admins can add projects and manage users; Project Leads can assign developers and upload documents.
-    *   New components like `AddProjectForm` and `AssignTeamForm` were created.
-4.  **Navigation**: The sidebar navigation (`src/components/sidebar-nav.tsx`) was updated to reflect the new application structure, removing irrelevant links and adding links to project and user management pages.
-5.  **Cleanup**: All irrelevant pages and components related to the old "MediTask" concept were removed to streamline the codebase.
-
-### Testing Strategy
--   **Manual UAT**: Performed comprehensive testing by logging in as each of the new roles (`admin`, `project-lead`, `developer`) and verifying that the UI and functionality correctly matched the specified permissions.
--   **Component Verification**: Manually tested new components like `AddProjectForm` to ensure they correctly updated the application's state and persisted data.
-
 ## Issue: Persistent Login Failures due to Stale Data (Solved)
 
 ### Description
