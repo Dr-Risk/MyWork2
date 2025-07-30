@@ -2,31 +2,40 @@
 
 This document describes the practices and principles followed during the coding and implementation phase of the PixelForge Nexus project.
 
-## 4.1 Secure Coding Practices
+## 4.1 Development Methodology and Tools
 
-The development process adhered to several key secure coding practices to minimize vulnerabilities.
+As defined in the Initiation phase, this project was developed using an **iterative Agile SDLC model**. This methodology allowed for the incremental development of features, with security considerations being integrated into each cycle rather than being treated as a final-stage task.
 
-- **Input Validation**: All data received from the client is untrusted. The mock backend in `src/lib/auth.ts` uses **Zod schemas** to perform strict server-side validation. This is the authoritative source of validation and protects against injection attacks (OWASP A03) and other malformed data submissions. Client-side validation is also used for better UX but is not relied upon for security.
+- **Key Stages**: Each iteration involved a cycle of design, development, and testing. For example, the user management feature was first designed with RBAC in mind, then developed, and finally tested with manual UAT from the perspective of each user role.
+- **Tools Used**:
+    - **IDE**: Visual Studio Code
+    - **Framework**: Next.js 15 with the App Router
+    - **Language**: TypeScript
+    - **UI**: ShadCN UI Components, Tailwind CSS
+    - **Version Control**: Git (via GitHub)
+    - **Package Management**: npm
+
+## 4.2 Secure Coding Practices
+
+The development process adhered to several key secure coding practices to minimize vulnerabilities. All security-related logic is centralized in the mock backend (`src/lib/`) for easier auditing.
+
+- **Input Validation**: All data received from the client is untrusted. The mock backend in `src/lib/auth.ts` uses **Zod schemas** to perform strict server-side validation. This is the authoritative source of validation and protects against injection attacks (OWASP A03) and other malformed data submissions.
 
   **Example from `src/lib/auth.ts`**:
   ```typescript
-  /**
-   * [SECURITY] Input Validation (OWASP A03 - Injection)
-   * A Zod schema to validate the shape and content of login credentials.
-   * The regex for the username is a strict "allow-list" to prevent common
-   * injection characters. This server-side validation is the primary defense.
-   */
+  // [SECURITY] Input Validation (OWASP A03 - Injection)
+  // This Zod schema validates login credentials. The regex is a strict
+  // "allow-list" to prevent common injection characters.
   const LoginCredentialsSchema = z.object({
     username: z.string().regex(/^[a-zA-Z0-9_.-]+$/),
     password: z.string().min(8),
   });
   ```
 
-- **Cross-Site Scripting (XSS) Prevention**: The application is built with React and Next.js, which provide strong, default protection against XSS attacks. Data rendered in JSX is automatically escaped, converting dangerous characters like `<` and `>` into strings. This prevents attacker-supplied code from being executed in the user's browser.
+- **Cross-Site Scripting (XSS) Prevention**: The application is built with React and Next.js, which provide strong, default protection against XSS attacks. Data rendered in JSX is automatically escaped, converting dangerous characters like `<` and `>` into strings.
 
   **Example from `src/app/dashboard/page.tsx`**:
   ```tsx
-  // When rendering a project name, React ensures the content is treated as text.
   // If `project.name` contained "<script>alert('XSS')</script>", React would
   // render the literal string, not execute the script.
   <CardTitle className="font-headline text-xl">{project.name}</CardTitle>
@@ -47,40 +56,21 @@ The development process adhered to several key secure coding practices to minimi
     };
     ```
 
-- **Strong Typing**: The project is developed using **TypeScript**. This helps prevent a wide range of common JavaScript errors, such as type coercion bugs, null pointer exceptions, and undefined properties, which can sometimes lead to security vulnerabilities.
+- **Strong Typing & Error Handling**: The project uses **TypeScript** to prevent common errors. Additionally, a centralized `logger.ts` service is used to log detailed errors on the server while sending only generic, non-sensitive error messages to the client, preventing information leakage.
 
-- **Error Handling**: The application avoids leaking sensitive information in error messages. Generic error messages are sent to the client (e.g., "Invalid username or password"), while detailed error information is logged to the console (simulating server-side logs) for debugging purposes using our centralized `logger.ts` service. This is handled in the `checkCredentials` function in `src/lib/auth.ts`.
+## 4.3 User Management and CRUD Operations
 
-- **Separation of Concerns**: The codebase is logically separated. UI components (`/components`) are distinct from business logic (`/lib`) and global state (`/context`). This makes the code easier to review for security flaws and maintain over time.
+User management is a critical, admin-only function handled via secure CRUD (Create, Read, Update, Delete) operations in `src/lib/auth.ts`.
 
-## 4.2 Use of Trusted Sources
-
-The application is built upon a foundation of well-known, trusted, and actively maintained open-source libraries.
-
-- **Next.js**: A full-stack React framework that provides many security features out-of-the-box, such as basic XSS protection in React rendering and CSRF protection mechanisms.
-- **ShadCN UI & Radix UI**: Headless component libraries that are focused on accessibility (WAI-ARIA standards) and are non-render-blocking, which reduces the attack surface for certain types of client-side vulnerabilities.
-- **Zod**: A TypeScript-first schema declaration and validation library. It is used to enforce strict data structures, which is a key part of preventing data-based vulnerabilities.
-- **Lucide-React**: A well-maintained and widely used library for icons, reducing the risk of using compromised or poorly coded SVG assets.
-
-Dependency versions are managed in `package.json` and can be audited for known vulnerabilities using tools like `npm audit`.
-
-## 4.3 Source Code Generation
-
-The primary source code was developed manually, adhering to the designs laid out in the previous phase. No automated code generation tools were used beyond the standard scaffolding provided by `create-next-app`.
+- **Create**: The `createUser` function validates new user data against a strict schema and sets secure defaults, such as forcing a password change on first login.
+- **Read**: The `getUsers` function retrieves a list of all users but sanitizes the data by removing sensitive fields like `passwordHash` and `mfaSecret` before returning it.
+- **Update**: Functions like `updateUserRole` and `updateUserProfile` contain specific business logic to prevent unauthorized changes, such as attempting to change an admin's role.
+- **Delete**: The `removeUser` function includes a check to prevent the admin account from being deleted.
 
 ## 4.4 Testing During Development
 
-Testing was an integral part of the development process, not a separate phase. This approach ensures that issues are caught early, reducing the cost and complexity of fixing them.
+Testing was an integral part of the development process.
 
-- **Static Testing (SAST) / Code Review**:
-    - The use of TypeScript and ESLint provides continuous **Static Application Security Testing (SAST)**, catching potential issues like type errors and unused variables as the code is written.
-    - A manual code review process was simulated, focusing on key security files like `src/lib/auth.ts` to ensure that authorization checks were correctly implemented for every sensitive action. This process successfully identified several critical vulnerabilities, such as a developer backdoor that allowed the admin account to bypass lockout mechanisms. The discovery and remediation of these issues are thoroughly documented in the `TROUBLESHOOTING.md` file.
-
-- **Unit Testing (Conceptual)**:
-    - While formal unit test files were not created for this prototype, the concept was applied by developing functions in isolation and testing them individually. For example, the `checkCredentials` function in `src/lib/auth.ts` was manually tested with various inputs (valid user, invalid user, locked user) to ensure it returned the correct `AuthResponse` in each case before it was integrated into the login form.
-
-- **Integration Testing (Manual)**:
-    - After developing new features, manual integration tests were performed to ensure they worked correctly with the existing system. A critical issue was discovered during this process, as documented in `TROUBLESHOOTING.md` under "Stale User Data in 'Add Project' Form". After an admin created a new user, that user would not appear in the "Project Lead" dropdown list. This was an **integration bug** between the `AddUserForm` component, the `auth-context`, the mock backend API, and the `dashboard` page. The issue was traced to a state management flaw where the components were not communicating correctly. It was fixed by implementing a callback function to explicitly trigger a data refresh after the new user was created, ensuring the components worked together as designed.
-
-- **System Testing (Manual)**:
-    - Before any major change was considered "complete," the application was tested as a whole from the perspective of each user role (`admin`, `project-lead`, `developer`). This involved logging in as each role and navigating through the entire application to ensure that all features worked as expected and that permissions were correctly enforced at a system level, confirming that changes for one role did not negatively impact another.
+- **Static Testing (SAST) / Code Review**: TypeScript and ESLint provided continuous static analysis. Manual code reviews of key files like `src/lib/auth.ts` were critical for finding and fixing vulnerabilities like a developer backdoor (documented in `TROUBLESHOOTING.md`).
+- **Integration Testing (Manual)**: After developing new features, manual tests were performed to ensure they worked correctly with the existing system. This process found and fixed a critical bug where newly created users would not appear in dropdown lists due to a state management issue.
+- **System Testing (Manual)**: Before any major change was considered complete, the application was tested end-to-end from the perspective of each user role (`admin`, `project-lead`, `developer`) to validate permissions and functionality.

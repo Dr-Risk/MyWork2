@@ -17,14 +17,13 @@ The application is designed as a modern, client-server web application.
 - **Environment Variables for Configuration**: The primary method for integrating with external services (like Google AI for Genkit) is through environment variables. These are managed in a `.env.local` file for local development. This approach separates sensitive configuration (like API keys) from the source code, which is a critical security and operational best practice.
 
 ### Security by Design Principles
-The architecture is founded on core security principles:
+The architecture is founded on core security principles, following industry best practices from **OWASP** and **NIST**.
 
-1.  **Defense in Depth**: Security is applied in layers.
-    - **Client-Side**: Input validation in forms (using Zod) provides immediate user feedback.
-    - **Server-Side**: The same validation rules are re-enforced on the mock backend (`auth.ts`), serving as the authoritative layer of defense.
-    - **UI**: Components are conditionally rendered based on user roles, preventing users from seeing options they are not authorized to use.
-2.  **Principle of Least Privilege**: The entire application is built around a strict Role-Based Access Control (RBAC) model. Each role (`admin`, `project-lead`, `developer`) is granted the absolute minimum set of permissions required to perform its function. For example, a `developer` cannot even see the API endpoint logic for deleting a project.
-3.  **Secure Defaults**: The default state of the application is the most secure state. Public registration is disabled, and new users must be explicitly created by an administrator. Multi-Factor Authentication is disabled by default and is an opt-in feature for users.
+1.  **Defense in Depth**: Security is applied in layers to minimize the attack surface.
+    - **Client-Side**: Input validation in forms (using Zod) provides immediate user feedback. UI components are conditionally rendered based on user roles, preventing users from seeing options they are not authorized to use.
+    - **Server-Side**: The same validation rules are re-enforced on the mock backend (`auth.ts`), serving as the authoritative layer of defense against any client-side bypass attempts.
+2.  **Principle of Least Privilege**: The entire application is built around a strict Role-Based Access Control (RBAC) model. Each role (`admin`, `project-lead`, `developer`) is granted the absolute minimum set of permissions required to perform its function. For example, a `developer` cannot even see the API endpoint logic for deleting a project. This directly supports the **Confidentiality** and **Integrity** goals of the CIA triad.
+3.  **Secure Defaults**: The default state of the application is the most secure state. Public registration is disabled, new users must be explicitly created by an administrator, and they are forced to change their default password on first login. Multi-Factor Authentication is an opt-in feature, allowing for a better user experience while still providing enhanced security for those who need it.
 
 ## 3.2 Design Phase
 
@@ -38,7 +37,7 @@ The application is structured logically to separate concerns:
 - **`/docs/`**: Contains all project documentation, including SDLC files and formal models.
 
 ### Data Flow Diagram (Authentication with MFA)
-This diagram shows the updated flow for a user login attempt, including the MFA step.
+This diagram shows the updated flow for a user login attempt, including the MFA and forced password change steps.
 
 ```mermaid
 sequenceDiagram
@@ -93,6 +92,6 @@ A simplified threat modeling exercise was performed using the **STRIDE** model a
 - **Information Disclosure**: Threat of exposing sensitive data to unauthorized users.
   - **Mitigation**: RBAC ensures users only see data they are assigned to. HTTPS (assumed standard) prevents data interception. **Crucially, the MFA secret is stored on the backend and never sent to the client.** The backend also never sends sensitive data (like password hashes) to the client.
 - **Denial of Service**: Threat of making the system unavailable.
-  - **Mitigation**: The account lockout mechanism in `src/lib/auth.ts` protects against brute-force login attacks. The MFA verification endpoint would also need rate limiting in a production environment to prevent token-guessing attacks.
+  - **Mitigation**: The account lockout mechanism in `src/lib/auth.ts` protects against brute-force login attacks, contributing to **Availability**. The MFA verification endpoint would also need rate limiting in a production environment to prevent token-guessing attacks.
 - **Elevation of Privilege**: A user gaining higher-level permissions.
-  - **Mitigation**: This is the most critical threat addressed. Every sensitive action is validated on the server against the user's role, preventing a user from bypassing client-side UI restrictions to perform unauthorized actions. For example, the `handleDeleteDocument` function in `src/app/dashboard/page.tsx` is only callable if the user has the correct permissions, which are checked via the `canManageDocs` flag.
+  - **Mitigation**: This is the most critical threat addressed. Every sensitive action is validated on the server against the user's role, preventing a user from bypassing client-side UI restrictions to perform unauthorized actions. This is the core of our **Authorization** strategy.
