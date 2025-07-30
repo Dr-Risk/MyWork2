@@ -1,6 +1,6 @@
 # SDLC Stage 6: Release and Deployment
 
-This document outlines the strategy for releasing and deploying the PixelForge Nexus application into a production environment.
+This document outlines the strategy for releasing and deploying the PixelForge Nexus application into a production environment, including the final sign-off process.
 
 ## 6.1 Release Management
 
@@ -20,7 +20,19 @@ The application is designed to be deployed on a modern cloud platform that suppo
 3.  **Deployment**: The built application is deployed to the hosting provider. Most modern providers (like Vercel or Firebase) offer a seamless deployment experience integrated with Git, allowing for automated deployments on every push to the `main` branch.
 4.  **Health Checks**: After deployment, automated health checks will be run against the production URL to ensure the application is online and responding correctly.
 
-## 6.3 Protection Against Threats
+## 6.3 Certification and Accreditation (C&A)
+
+Before the application can be authorized for production use, it must undergo a formal Certification and Accreditation process. This is the final gate in the release cycle.
+
+-   **Certification**: This is the comprehensive technical evaluation of the system and its security controls.
+    -   **Process**: All artifacts from the SDLC, including the requirements (`2_requirements.md`), design documents (`3_architecture_and_design.md`), and especially the full results of the testing stage (`5_testing.md`), are compiled.
+    -   **Outcome**: A formal report is produced that certifies the system has been tested against the specified security requirements and documents any remaining risks. This process confirms that we have built the system *correctly*.
+
+-   **Accreditation**: This is the official management decision to authorize the system for operation in a production environment.
+    -   **Process**: A designated authority (e.g., a system owner or management board) reviews the certification report, the risk analysis, and the overall business need for the application.
+    -   **Outcome**: If the benefits are deemed to outweigh the residual risks, the system is granted "Accreditation," or formal approval to go live. This confirms that we have built the *right* system for the business's needs.
+
+## 6.4 Protection Against Threats
 
 ### Internal Threats
 - **Principle of Least Privilege**: Access to the production environment (hosting dashboard, database) will be strictly limited. Only authorized administrators will have deployment privileges. Developers will not have direct access to the production environment.
