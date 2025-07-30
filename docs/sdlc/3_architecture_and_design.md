@@ -57,20 +57,25 @@ sequenceDiagram
         alt User not found or password incorrect
             Server-->>Client: Return generic error
         else User and Password are Correct
-            alt MFA Enabled
-                Server-->>Client: Signal MFA is required
-                Client->>Server: Submit MFA Token
-                Server->>MFAService: verifyMfaToken(secret, token)
-                MFAService-->>Server: Return verification result
-                alt Token Invalid
-                    Server-->>Client: Return "Invalid Token" error
-                else Token Valid
-                    Server->>Client: Return success + user profile
+            alt Must Change Password?
+                Server-->>Client: Signal password change is required
+                Client->>Client: Redirect to /change-password
+            else Password OK
+                alt MFA Enabled
+                    Server-->>Client: Signal MFA is required
+                    Client->>Server: Submit MFA Token
+                    Server->>MFAService: verifyMfaToken(secret, token)
+                    MFAService-->>Server: Return verification result
+                    alt Token Invalid
+                        Server-->>Client: Return "Invalid Token" error
+                    else Token Valid
+                        Server->>Client: Return success + user profile
+                    end
+                else MFA Not Enabled
+                     Server->>DB: Reset login attempts
+                     DB-->>Server: Confirm reset
+                     Server-->>Client: Return success + user profile
                 end
-            else MFA Not Enabled
-                 Server->>DB: Reset login attempts
-                 DB-->>Server: Confirm reset
-                 Server-->>Client: Return success + user profile
             end
         end
     end
