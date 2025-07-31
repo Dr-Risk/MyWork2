@@ -45,7 +45,7 @@ The application is structured logically to separate concerns:
 - **`/docs/`**: Contains all project documentation, including SDLC files and formal models.
 
 ### Data Flow Diagram (Authentication with MFA)
-This diagram shows the updated flow for a user login attempt, including the MFA and forced password change steps.
+This sequence diagram shows the flow of messages between system components during an authentication attempt. It illustrates the sequence of operations but does not model the internal state logic. For a formal model of the system's state transitions, see the Petri net in `BEHAVIOURAL_MODEL.md`.
 
 ```mermaid
 sequenceDiagram
@@ -103,3 +103,5 @@ A simplified threat modeling exercise was performed using the **STRIDE** model a
   - **Mitigation**: The account lockout mechanism in `src/lib/auth.ts` protects against brute-force login attacks, contributing to **Availability**. The MFA verification endpoint would also need rate limiting in a production environment to prevent token-guessing attacks.
 - **Elevation of Privilege**: A user gaining higher-level permissions.
   - **Mitigation**: This is the most critical threat addressed. Every sensitive action is validated on the server against the user's role, preventing a user from bypassing client-side UI restrictions to perform unauthorized actions. This is the core of our **Authorization** strategy.
+
+    
