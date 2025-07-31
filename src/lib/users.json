@@ -32,8 +32,8 @@
     "name": "undertaker",
     "initials": "U",
     "email": "utaker@example.com",
-    "loginAttempts": 3,
-    "isLocked": true,
+    "loginAttempts": 0,
+    "isLocked": false,
     "passwordLastChanged": "2025-07-22T16:37:37.649Z",
     "mfaEnabled": false
   },
@@ -49,16 +49,30 @@
     "passwordLastChanged": "2025-07-22T17:11:46.734Z",
     "mfaEnabled": false
   },
-  "crodes": {
-    "username": "crodes",
-    "passwordHash": "crodes@123_hashed",
+  "lala": {
+    "username": "lala",
+    "passwordHash": "Lalaland@123_hashed",
     "role": "developer",
-    "name": "code",
-    "initials": "C",
-    "email": "crodes@example.com",
-    "loginAttempts": 3,
-    "isLocked": true,
-    "passwordLastChanged": "2025-07-22T20:13:18.417Z",
-    "mfaEnabled": false
+    "name": "lalaji",
+    "initials": "L",
+    "email": "lala@123.com",
+    "loginAttempts": 0,
+    "isLocked": false,
+    "passwordLastChanged": "2025-07-31T23:53:25.286Z",
+    "mfaEnabled": false,
+    "mustChangePassword": true
+  },
+  "martin1": {
+    "username": "martin1",
+    "passwordHash": "Martin@123_hashed",
+    "role": "project-lead",
+    "name": "martin king",
+    "initials": "MK",
+    "email": "martin@example.com",
+    "loginAttempts": 0,
+    "isLocked": false,
+    "passwordLastChanged": "2025-07-31T23:55:11.628Z",
+    "mfaEnabled": false,
+    "mustChangePassword": true
   }
 }
