@@ -126,14 +126,6 @@ const readUsers = async (): Promise<{ [key: string]: UserWithPassword }> => {
     }
 
     try {
-        // If the file doesn't exist, create it with initial data.
-        if (!fs.existsSync(dbPath)) {
-            const initialUsers = getInitialUsers();
-            await fs.promises.writeFile(dbPath, JSON.stringify(initialUsers, null, 2));
-            usersCache = initialUsers;
-            return usersCache;
-        }
-
         const data = await fs.promises.readFile(dbPath, 'utf-8');
         usersCache = JSON.parse(data);
         return usersCache!;
