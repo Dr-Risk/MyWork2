@@ -104,31 +104,18 @@ export default function DashboardPage() {
     }
   }, [isLoading, loadData]);
 
-
-  /**
-   * Persists the current state of projects and documents to localStorage.
-   * This `useEffect` hook runs whenever the `projects` or `documents` state changes,
-   * ensuring that the user's data is saved across browser sessions.
-   */
-  useEffect(() => {
-    // We only want to save to localStorage after the initial data has been loaded
-    // to prevent overwriting the stored data with an empty initial state.
-    if (isDataLoaded) {
-      localStorage.setItem("appProjects", JSON.stringify(projects));
-      localStorage.setItem("appDocuments", JSON.stringify(documents));
-    }
-  }, [projects, documents, isDataLoaded]);
-
   /**
    * Handles adding a new project to the state.
    * It creates a new project object with a unique ID and "Active" status,
    * closes the "Add Project" dialog, and shows a success toast.
    */
   const handleAddProject = (newProject: Omit<Project, 'id' | 'status'>) => {
-    setProjects(prev => [
-      { ...newProject, id: Date.now(), status: "Active" },
-      ...prev
-    ]);
+    const updatedProjects = [
+      { ...newProject, id: Date.now(), status: "Active" as const },
+      ...projects
+    ];
+    setProjects(updatedProjects);
+    localStorage.setItem("appProjects", JSON.stringify(updatedProjects));
     setIsAddProjectOpen(false);
     toast({ title: "Project Created", description: `"${newProject.name}" has been added.` });
   };
@@ -138,7 +125,9 @@ export default function DashboardPage() {
    * It finds the project by its ID and updates its status.
    */
   const handleCompleteProject = (projectId: number) => {
-    setProjects(prev => prev.map(p => p.id === projectId ? { ...p, status: "Completed" } : p));
+    const updatedProjects = projects.map(p => p.id === projectId ? { ...p, status: "Completed" as const } : p);
+    setProjects(updatedProjects);
+    localStorage.setItem("appProjects", JSON.stringify(updatedProjects));
     toast({ title: "Project Updated", description: "Project marked as complete." });
   };
 
@@ -147,13 +136,15 @@ export default function DashboardPage() {
    * This function now REPLACES the existing developer list with the new one.
    */
   const handleAssignTeam = (projectId: number, assignedUsernames: string[]) => {
-     setProjects(prev => prev.map(p => {
+     const updatedProjects = projects.map(p => {
         if (p.id === projectId) {
             // Replace the old list of developers with the newly submitted list.
             return { ...p, assignedDevelopers: assignedUsernames };
         }
         return p;
-    }));
+    });
+    setProjects(updatedProjects);
+    localStorage.setItem("appProjects", JSON.stringify(updatedProjects));
     setAssignTeamProjectId(null); // Close the dialog.
     toast({ title: "Team Updated", description: "The project team has been updated." });
   };
@@ -162,12 +153,14 @@ export default function DashboardPage() {
    * Handles updating the project lead for a specific project.
    */
   const handleUpdateProjectLead = (projectId: number, newLeadUsername: string) => {
-    setProjects(prev => prev.map(p => {
+    const updatedProjects = projects.map(p => {
         if (p.id === projectId) {
             return { ...p, lead: newLeadUsername };
         }
         return p;
-    }));
+    });
+    setProjects(updatedProjects);
+    localStorage.setItem("appProjects", JSON.stringify(updatedProjects));
     setEditingProjectId(null); // Close the dialog.
     toast({ title: "Project Lead Updated", description: "The project lead has been changed." });
   };
@@ -186,7 +179,9 @@ export default function DashboardPage() {
           url: event.target.result as string, // Store the file content as a Data URI
           projectId,
         };
-        setDocuments(prev => [newDocument, ...prev]);
+        const updatedDocuments = [newDocument, ...documents];
+        setDocuments(updatedDocuments);
+        localStorage.setItem("appDocuments", JSON.stringify(updatedDocuments));
         toast({ title: "File Uploaded", description: `"${file.name}" has been added to the project.` });
       }
     };
@@ -198,7 +193,9 @@ export default function DashboardPage() {
    * [PERMISSIONS] This action is restricted to Admins and Project Leads.
    */
   const handleDeleteDocument = (documentId: number) => {
-    setDocuments(prev => prev.filter(doc => doc.id !== documentId));
+    const updatedDocuments = documents.filter(doc => doc.id !== documentId);
+    setDocuments(updatedDocuments);
+    localStorage.setItem("appDocuments", JSON.stringify(updatedDocuments));
     toast({
         variant: "destructive",
         title: "Document Deleted",
