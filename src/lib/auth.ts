@@ -130,11 +130,10 @@ const readUsers = async (): Promise<{ [key: string]: UserWithPassword }> => {
         usersCache = JSON.parse(data);
         return usersCache!;
     } catch (error) {
-        logger.error('Error reading users from file, falling back to initial data.', error);
-        // Fallback to in-memory data if the file doesn't exist or is corrupt,
-        // but do not write it automatically to prevent server restart loops.
-        usersCache = getInitialUsers();
-        return usersCache;
+        logger.error('Error reading users from file. The file may not exist or is corrupted.', error);
+        // If reading fails, return an empty object. Do NOT write anything to disk.
+        // This prevents the application from overwriting existing data with a blank state.
+        return {};
     }
 };
 
@@ -155,7 +154,7 @@ const writeUsers = async (data: { [key: string]: UserWithPassword }): Promise<vo
 
 /**
  * A private function that returns a fresh copy of the initial user data.
- * This is the single source of truth for initializing the mock database.
+ * This is the single source of truth for initializing the mock database IF IT IS EMPTY.
  */
 function getInitialUsers(): { [key: string]: UserWithPassword } {
     return {
