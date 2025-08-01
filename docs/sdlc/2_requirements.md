@@ -63,3 +63,4 @@ These are the definitive, testable security requirements that will be implemente
 | **SR-06** | **Confirmation for Destructive Actions**: The UI must require explicit user confirmation before executing any irreversible action, such as deleting a user, project, or document. |
 | **SR-07** | **Secure Defaults**: Self-registration will be disabled. New users can only be created by an administrator, establishing a secure default posture. |
 | **SR-08** | **Forced Password Change**: A new user created by an admin must be forced to change their default password upon their first successful login. |
+| **SR-09** | **Password Length**: The system must enforce a minimum password length of 8 characters, which aligns with **NIST Special Publication 800-63B** guidelines for memorized secrets. |
