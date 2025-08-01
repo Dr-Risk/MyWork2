@@ -48,5 +48,18 @@
     "isLocked": false,
     "passwordLastChanged": "2025-07-22T17:11:46.734Z",
     "mfaEnabled": false
+  },
+  "martin1": {
+    "username": "martin1",
+    "passwordHash": "Martin@1234_hashed",
+    "role": "developer",
+    "name": "martinking",
+    "initials": "M",
+    "email": "martin1@gmail.com",
+    "loginAttempts": 0,
+    "isLocked": false,
+    "passwordLastChanged": "2025-08-01T00:17:15.947Z",
+    "mfaEnabled": false,
+    "mustChangePassword": false
   }
 }
