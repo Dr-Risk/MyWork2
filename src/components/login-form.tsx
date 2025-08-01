@@ -92,13 +92,20 @@ export function LoginForm({ onMfaRequired }: LoginFormProps) {
         break;
 
       case 'expired':
+        toast({
+          variant: "destructive",
+          title: "Password Change Required",
+          description: response.message,
+        });
+        router.push(`/change-password?user=${response.user.username}`);
+        break;
       case 'must_change_password': // Handle forced password change
         toast({
           variant: "destructive",
           title: "Password Change Required",
           description: response.message,
         });
-        router.push("/change-password");
+        router.push(`/change-password?user=${response.user.username}`);
         break;
 
       case 'locked':

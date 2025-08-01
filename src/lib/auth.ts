@@ -131,10 +131,13 @@ const readUsers = async (): Promise<{ [key: string]: UserWithPassword }> => {
         return usersCache!;
     } catch (error) {
         logger.error('Error reading users from file, falling back to initial data.', error);
+        // Fallback to in-memory data if the file doesn't exist or is corrupt,
+        // but do not write it automatically to prevent server restart loops.
         usersCache = getInitialUsers();
         return usersCache;
     }
 };
+
 
 /**
  * Writes the entire user object to the users.json file and updates the cache.
@@ -205,7 +208,7 @@ export const createUser = async (
     // Generate user initials from their full name.
     const initials = (userData.name.match(/\b\w/g) || []).join('').toUpperCase() || '??';
 
-    users[userData.username] = {
+    const newUser: UserWithPassword = {
         username: userData.username,
         passwordHash: `${userData.password}_hashed`, // MOCK HASHING
         role: userData.role, 
@@ -218,7 +221,12 @@ export const createUser = async (
         mfaEnabled: false,
         mustChangePassword: true, // Force password change on first login.
     };
-    await writeUsers(users);
+
+    // Create the new user object
+    const updatedUsers = { ...users, [userData.username]: newUser };
+    
+    // Write the updated object to the file and refresh the cache.
+    await writeUsers(updatedUsers);
 
     logger.info(`User '${userData.username}' created successfully.`);
     return { success: true, message: "User created successfully." };
@@ -245,7 +253,7 @@ export type AuthResponse =
     | { status: 'invalid'; message: string }
     | { status: 'locked'; message: string }
     | { status: 'expired'; message: string }
-    | { status: 'must_change_password'; message: string }
+    | { status: 'must_change_password'; message: string; user: { username: string } }
     | { status: 'mfa_required'; message: string; user: Pick<UserProfile, 'username' | 'mfaEnabled'> };
 
 /**
@@ -311,7 +319,7 @@ export const checkCredentials = async (username: string, pass: string): Promise<
   // 5. Check if the user must change their password.
   if (user.mustChangePassword) {
     logger.info(`User '${username}' must change their password.`);
-    return { status: 'must_change_password', message: 'You must change your password before continuing.' };
+    return { status: 'must_change_password', message: 'You must change your password before continuing.', user: { username: user.username } };
   }
 
   // 6. [SECURITY] Password Expiration: Check for non-admin users.
@@ -414,7 +422,6 @@ export const updateUserProfile = async (
   return { success: true, message: 'Profile updated successfully.', user: userProfile };
 };
 
-
 /**
  * Updates a user's password after verifying their current one.
  */
@@ -445,6 +452,30 @@ export const updateUserPassword = async (
     logger.info(`User '${username}' password updated successfully.`);
     return { success: true, message: "Password updated successfully." };
 }
+
+/**
+ * Updates a user's password using a temporary token (simulated by username).
+ * This is for the forced password change flow where the old password isn't required.
+ */
+export const updateUserPasswordWithTempToken = async (
+    username: string, // In a real app, this would be a secure, single-use token.
+    newPass: string
+): Promise<{ success: boolean; message: string }> => {
+    const users = await readUsers();
+    const user = users[username];
+    if (!user) {
+        return { success: false, message: "Invalid session or user not found." };
+    }
+
+    user.passwordHash = `${newPass}_hashed`; // MOCK HASHING
+    user.passwordLastChanged = new Date().toISOString();
+    user.mustChangePassword = false; // Clear the flag.
+    await writeUsers(users);
+
+    logger.info(`User '${username}' password updated successfully via temporary token flow.`);
+    return { success: true, message: "Password updated successfully." };
+}
+
 
 /**
  * Manually locks a user account.
