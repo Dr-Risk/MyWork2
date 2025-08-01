@@ -126,15 +126,25 @@ const readUsers = async (): Promise<{ [key: string]: UserWithPassword }> => {
     }
 
     try {
-        const data = await fs.promises.readFile(dbPath, 'utf-8');
-        usersCache = JSON.parse(data);
-        return usersCache!;
+        // Check if the file exists before attempting to read.
+        if (fs.existsSync(dbPath)) {
+            const data = await fs.promises.readFile(dbPath, 'utf-8');
+            // Prevent parsing empty files which would cause an error.
+            if (data) {
+                usersCache = JSON.parse(data);
+            } else {
+                usersCache = {};
+            }
+        } else {
+            // If the file does not exist, initialize with an empty object.
+             usersCache = {};
+        }
     } catch (error) {
-        logger.error('Error reading users from file. The file may not exist or is corrupted.', error);
-        // If reading fails, return an empty object. Do NOT write anything to disk.
-        // This prevents the application from overwriting existing data with a blank state.
-        return {};
+        logger.error('Error reading or parsing users.json. Falling back to an empty user list.', error);
+        // In case of a read or parse error, default to an empty object to prevent crashes.
+        usersCache = {};
     }
+    return usersCache!;
 };
 
 
@@ -198,7 +208,8 @@ type CreateUserInput = z.infer<typeof CreateUserSchema>;
 export const createUser = async (
   userData: CreateUserInput
 ): Promise<{ success: boolean; message:string }> => {
-    const users = await readUsers();
+    let users = await readUsers();
+    
     // Prevent username collisions.
     if (users[userData.username]) {
         return { success: false, message: "Username already exists." };
