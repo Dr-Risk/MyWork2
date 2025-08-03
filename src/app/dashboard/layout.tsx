@@ -79,7 +79,7 @@ export default function DashboardLayout({
           {/* A trigger to open the sidebar on mobile devices. */}
           <SidebarTrigger className="md:hidden" />
           <div className="w-full flex-1">
-            {/* Future components like breadcrumbs or a global search bar can be placed here. */}
+             <span className="text-sm font-semibold">Welcome, {user.name}</span>
           </div>
           {/* The user navigation dropdown (profile, settings, logout). */}
           <UserNav />
