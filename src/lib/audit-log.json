@@ -1,2 +1,44 @@
-
-[]
+[
+  {
+    "id": 1754321707530,
+    "timestamp": "2025-08-04T15:35:07.530Z",
+    "username": "admin",
+    "action": "DELETE_USER",
+    "details": "Admin permanently removed user 'utaker'."
+  },
+  {
+    "id": 1754321709711,
+    "timestamp": "2025-08-04T15:35:09.711Z",
+    "username": "admin",
+    "action": "DELETE_USER",
+    "details": "Admin permanently removed user 'rortan'."
+  },
+  {
+    "id": 1754321712490,
+    "timestamp": "2025-08-04T15:35:12.490Z",
+    "username": "admin",
+    "action": "DELETE_USER",
+    "details": "Admin permanently removed user 'CMpunk'."
+  },
+  {
+    "id": 1754321714392,
+    "timestamp": "2025-08-04T15:35:14.392Z",
+    "username": "admin",
+    "action": "DELETE_USER",
+    "details": "Admin permanently removed user 'Jcena'."
+  },
+  {
+    "id": 1754321798075,
+    "timestamp": "2025-08-04T15:36:38.076Z",
+    "username": "moqadri",
+    "action": "LOGIN_SUCCESS",
+    "details": "User logged in successfully with MFA."
+  },
+  {
+    "id": 1754321818649,
+    "timestamp": "2025-08-04T15:36:58.649Z",
+    "username": "moqadri",
+    "action": "MFA_DISABLED",
+    "details": "User disabled MFA."
+  }
+]

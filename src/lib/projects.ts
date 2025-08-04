@@ -47,5 +47,3 @@ export const initialProjects: Project[] = [];
  * This is an empty array to ensure a clean slate.
  */
 export const initialDocuments: Document[] = [];
-
-    

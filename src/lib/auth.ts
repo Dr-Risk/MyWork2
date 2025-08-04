@@ -23,17 +23,11 @@ import path from 'path';
 import { logger } from './logger';
 import { generateMfaQrCode, generateMfaSecret, verifyMfaToken } from './mfa';
 import { addAuditLog } from "./audit-log";
+import type { Project } from "./projects";
 
 // Path to the mock database file
 const dbPath = path.join(process.cwd(), 'src', 'lib', 'users.json');
-
-/**
- * [PERFORMANCE] In-memory cache for user data.
- * Instead of reading from the filesystem on every request, we store the user
- * data in this variable. It's populated once on startup and updated only when
- * a change is made, drastically improving response times for data lookups.
- */
-let usersCache: { [key: string]: UserWithPassword } | null = null;
+const projectsDbPath = path.join(process.cwd(), 'src', 'lib', 'projects.json');
 
 
 /**
@@ -116,6 +110,11 @@ interface UserWithPassword extends UserProfile {
     mustChangePassword?: boolean;
 }
 
+// Separate cache for projects to manage them within this module
+let projectsCache: Project[] | null = null;
+let usersCache: { [key: string]: UserWithPassword } | null = null;
+
+
 /**
  * Reads all users from the users.json file, using a cache to avoid redundant reads.
  * @returns A promise that resolves to the user data object.
@@ -164,25 +163,38 @@ const writeUsers = async (data: { [key: string]: UserWithPassword }): Promise<vo
 };
 
 /**
- * A private function that returns a fresh copy of the initial user data.
- * This is the single source of truth for initializing the mock database IF IT IS EMPTY.
+ * Reads all projects from the projects.json file.
+ * @returns A promise that resolves to an array of project entries.
  */
-function getInitialUsers(): { [key: string]: UserWithPassword } {
-    return {
-        'moqadri': {
-            username: 'moqadri',
-            passwordHash: 'DefaultPassword123_hashed', // Corresponds to 'DefaultPassword123'
-            role: 'admin',
-            name: 'Mo Qadri',
-            initials: 'MQ',
-            email: 'mo.qadri@example.com',
-            loginAttempts: 0,
-            isLocked: false,
-            passwordLastChanged: new Date().toISOString(),
-            mfaEnabled: false,
-        }
-    };
-}
+const readProjects = async (): Promise<Project[]> => {
+    if (projectsCache) {
+      return projectsCache;
+    }
+    try {
+      if (!fs.existsSync(projectsDbPath)) {
+        await fs.promises.writeFile(projectsDbPath, '[]', 'utf-8');
+      }
+      const data = await fs.promises.readFile(projectsDbPath, 'utf-8');
+      projectsCache = data ? JSON.parse(data) : [];
+      return projectsCache!;
+    } catch (error) {
+      logger.error('Error reading or parsing projects.json.', error);
+      return [];
+    }
+  };
+  
+/**
+ * Writes projects to the projects.json file.
+ * @param projects The array of projects to write.
+ */
+const writeProjects = async (projects: Project[]): Promise<void> => {
+    try {
+      await fs.promises.writeFile(projectsDbPath, JSON.stringify(projects, null, 2));
+      projectsCache = projects;
+    } catch (error) {
+      logger.error('Error writing projects to file.', error);
+    }
+};
 
 
 /**
@@ -542,11 +554,9 @@ export const unlockUserAccount = async (
 
 
 /**
- * Permanently removes a user from the system.
+ * Permanently removes a user from the system and updates project assignments.
  */
-export const removeUser = async (
-    username: string
-): Promise<{ success: boolean; message: string }> => {
+export const removeUser = async (username: string): Promise<{ success: boolean; message: string }> => {
     const users = await readUsers();
     const user = users[username];
     if (!user) return { success: false, message: "User not found." };
@@ -554,8 +564,39 @@ export const removeUser = async (
 
     delete users[username];
     await writeUsers(users);
-    await addAuditLog('admin', 'DELETE_USER', `Admin permanently removed user '${username}'.`);
-    logger.info(`User '${username}' removed from the system by an admin.`);
+
+    // Now, clean up project assignments
+    let projects = await readProjects();
+    let projectsModified = false;
+    projects = projects.map(p => {
+        let modified = false;
+        // If the deleted user was a project lead, unassign them.
+        if (p.lead === username) {
+            p.lead = ''; // Or set to a default, depending on business rules
+            modified = true;
+        }
+        // If the deleted user was an assigned developer, remove them from the list.
+        if (p.assignedDevelopers.includes(username)) {
+            p.assignedDevelopers = p.assignedDevelopers.filter(dev => dev !== username);
+            modified = true;
+        }
+        if (modified) projectsModified = true;
+        return p;
+    });
+
+    // If any project was changed, write the updated project data back to the "database".
+    if (projectsModified) {
+        // In a real DB, this would be a single transaction.
+        // For our mock, we just write the whole file again.
+        await writeProjects(projects);
+        // Persist to the main app's localStorage copy as well
+        if (typeof localStorage !== 'undefined') {
+            localStorage.setItem("appProjects", JSON.stringify(projects));
+        }
+    }
+
+    await addAuditLog('admin', 'DELETE_USER', `Admin permanently removed user '${username}' and updated project assignments.`);
+    logger.info(`User '${username}' removed from the system by an admin. Project assignments cleaned up.`);
     return { success: true, message: "User removed successfully." };
 };
 
