@@ -20,7 +20,7 @@ import type { Project, Document } from "@/lib/projects";
 import { AddProjectForm } from "@/components/add-project-form";
 import { useToast } from "@/hooks/use-toast";
 import { AddUserForm } from "@/components/add-user-form";
-import { getUsers as getAllUsers, type SanitizedUser, getDevelopers } from "@/lib/auth";
+import { getUsers as getAllUsers, type SanitizedUser } from "@/lib/auth";
 import { ProjectCard } from "@/components/project-card";
 import { addAuditLog } from "@/lib/audit-log";
 
@@ -84,88 +84,99 @@ export default function DashboardPage() {
   }, [isLoading, loadData]);
 
   /**
-   * Handles adding a new project to the state.
-   * It creates a new project object with a unique ID and "Active" status,
-   * closes the "Add Project" dialog, and shows a success toast.
+   * [PERFORMANCE] Handles adding a new project to the state.
+   * `useCallback` ensures this function is not recreated on every render,
+   * which is crucial for preventing unnecessary re-renders of child components.
    */
-  const handleAddProject = (newProject: Omit<Project, 'id' | 'status'>) => {
+  const handleAddProject = useCallback((newProject: Omit<Project, 'id' | 'status'>) => {
     if (!user) return;
-    const projectToAdd = { ...newProject, id: Date.now(), status: "Active" as const };
-    const updatedProjects = [
-      projectToAdd,
-      ...projects
-    ];
-    setProjects(updatedProjects);
-    localStorage.setItem("appProjects", JSON.stringify(updatedProjects));
-    addAuditLog(user.username, 'CREATE_PROJECT', `Created project: "${projectToAdd.name}".`);
+    setProjects(prevProjects => {
+      const projectToAdd = { ...newProject, id: Date.now(), status: "Active" as const };
+      const updatedProjects = [projectToAdd, ...prevProjects];
+      localStorage.setItem("appProjects", JSON.stringify(updatedProjects));
+      addAuditLog(user.username, 'CREATE_PROJECT', `Created project: "${projectToAdd.name}".`);
+      return updatedProjects;
+    });
     setIsAddProjectOpen(false);
     toast({ title: "Project Created", description: `"${newProject.name}" has been added.` });
-  };
+  }, [user, toast]);
   
   /**
-   * Handles marking a project as "Completed".
-   * It finds the project by its ID and updates its status.
+   * [PERFORMANCE] Handles marking a project as "Completed".
    */
-  const handleCompleteProject = (projectId: number) => {
+  const handleCompleteProject = useCallback((projectId: number) => {
     if (!user) return;
-    const project = projects.find(p => p.id === projectId);
-    if (!project) return;
-
-    const updatedProjects = projects.map(p => p.id === projectId ? { ...p, status: "Completed" as const } : p);
-    setProjects(updatedProjects);
-    localStorage.setItem("appProjects", JSON.stringify(updatedProjects));
-    addAuditLog(user.username, 'COMPLETE_PROJECT', `Marked project as complete: "${project.name}".`);
-    toast({ title: "Project Updated", description: "Project marked as complete." });
-  };
+    let projectName = '';
+    setProjects(prevProjects => {
+        const updatedProjects = prevProjects.map(p => {
+            if (p.id === projectId) {
+                projectName = p.name;
+                return { ...p, status: "Completed" as const };
+            }
+            return p;
+        });
+        localStorage.setItem("appProjects", JSON.stringify(updatedProjects));
+        return updatedProjects;
+    });
+    if (projectName) {
+        addAuditLog(user.username, 'COMPLETE_PROJECT', `Marked project as complete: "${projectName}".`);
+        toast({ title: "Project Updated", description: "Project marked as complete." });
+    }
+  }, [user, toast]);
 
   /**
-   * Handles assigning developers to a project.
-   * This function now REPLACES the existing developer list with the new one.
+   * [PERFORMANCE] Handles assigning developers to a project.
    */
-  const handleAssignTeam = (projectId: number, assignedUsernames: string[]) => {
+  const handleAssignTeam = useCallback((projectId: number, assignedUsernames: string[]) => {
      if (!user) return;
-     const project = projects.find(p => p.id === projectId);
-     if (!project) return;
-
-     const updatedProjects = projects.map(p => {
-        if (p.id === projectId) {
-            // Replace the old list of developers with the newly submitted list.
-            return { ...p, assignedDevelopers: assignedUsernames };
-        }
-        return p;
+     let projectName = '';
+     setProjects(prevProjects => {
+        const updatedProjects = prevProjects.map(p => {
+           if (p.id === projectId) {
+               projectName = p.name;
+               // Replace the old list of developers with the newly submitted list.
+               return { ...p, assignedDevelopers: assignedUsernames };
+           }
+           return p;
+       });
+       localStorage.setItem("appProjects", JSON.stringify(updatedProjects));
+       return updatedProjects;
     });
-    setProjects(updatedProjects);
-    localStorage.setItem("appProjects", JSON.stringify(updatedProjects));
-    addAuditLog(user.username, 'ASSIGN_TEAM', `Updated team for project "${project.name}". Assigned: ${assignedUsernames.join(', ') || 'None'}.`);
-    toast({ title: "Team Updated", description: "The project team has been updated." });
-  };
+    if (projectName) {
+        addAuditLog(user.username, 'ASSIGN_TEAM', `Updated team for project "${projectName}". Assigned: ${assignedUsernames.join(', ') || 'None'}.`);
+        toast({ title: "Team Updated", description: "The project team has been updated." });
+    }
+  }, [user, toast]);
   
   /**
-   * Handles updating the project lead for a specific project.
+   * [PERFORMANCE] Handles updating the project lead.
    */
-  const handleUpdateProjectLead = (projectId: number, newLeadUsername: string) => {
+  const handleUpdateProjectLead = useCallback((projectId: number, newLeadUsername: string) => {
     if (!user) return;
-    const project = projects.find(p => p.id === projectId);
-    if (!project) return;
-    
-    const updatedProjects = projects.map(p => {
-        if (p.id === projectId) {
-            return { ...p, lead: newLeadUsername };
-        }
-        return p;
+    let projectName = '';
+    setProjects(prevProjects => {
+        const updatedProjects = prevProjects.map(p => {
+            if (p.id === projectId) {
+                projectName = p.name;
+                return { ...p, lead: newLeadUsername };
+            }
+            return p;
+        });
+        localStorage.setItem("appProjects", JSON.stringify(updatedProjects));
+        return updatedProjects;
     });
-    setProjects(updatedProjects);
-    localStorage.setItem("appProjects", JSON.stringify(updatedProjects));
-    addAuditLog(user.username, 'UPDATE_LEAD', `Changed project lead for "${project.name}" to ${newLeadUsername}.`);
-    toast({ title: "Project Lead Updated", description: "The project lead has been changed." });
-  };
+    if (projectName) {
+        addAuditLog(user.username, 'UPDATE_LEAD', `Changed project lead for "${projectName}" to ${newLeadUsername}.`);
+        toast({ title: "Project Lead Updated", description: "The project lead has been changed." });
+    }
+  }, [user, toast]);
 
   /**
-   * Reads a file as a Data URI and adds it to the documents state.
-   * This ensures the file content is stored and persists in localStorage.
+   * [PERFORMANCE] Handles file uploads.
    */
-  const handleFileUpload = (projectId: number, file: File) => {
+  const handleFileUpload = useCallback((projectId: number, file: File) => {
     if (!user) return;
+    
     const project = projects.find(p => p.id === projectId);
     if (!project) return;
 
@@ -175,54 +186,56 @@ export default function DashboardPage() {
         const newDocument: Document = {
           id: Date.now(),
           name: file.name,
-          url: event.target.result as string, // Store the file content as a Data URI
+          url: event.target.result as string,
           projectId,
         };
-        const updatedDocuments = [newDocument, ...documents];
-        setDocuments(updatedDocuments);
-        localStorage.setItem("appDocuments", JSON.stringify(updatedDocuments));
+        setDocuments(prevDocs => {
+            const updatedDocuments = [newDocument, ...prevDocs];
+            localStorage.setItem("appDocuments", JSON.stringify(updatedDocuments));
+            return updatedDocuments;
+        });
         addAuditLog(user.username, 'UPLOAD_DOCUMENT', `Uploaded document "${file.name}" to project "${project.name}".`);
         toast({ title: "File Uploaded", description: `"${file.name}" has been added to the project.` });
       }
     };
     reader.readAsDataURL(file);
-  };
+  }, [user, projects, toast]);
 
   /**
-   * Handles permanently deleting a document after user confirmation.
-   * [PERMISSIONS] This action is restricted to Admins and Project Leads.
+   * [PERFORMANCE] Handles deleting a document.
    */
-  const handleDeleteDocument = (documentId: number) => {
+  const handleDeleteDocument = useCallback((documentId: number) => {
     if (!user) return;
-    const docToDelete = documents.find(doc => doc.id === documentId);
-    if (!docToDelete) return;
-    const project = projects.find(p => p.id === docToDelete.projectId);
-
-    const updatedDocuments = documents.filter(doc => doc.id !== documentId);
-    setDocuments(updatedDocuments);
-    localStorage.setItem("appDocuments", JSON.stringify(updatedDocuments));
-
-    if (project) {
-        addAuditLog(user.username, 'DELETE_DOCUMENT', `Deleted document "${docToDelete.name}" from project "${project.name}".`);
-    }
-
-    toast({
-        variant: "destructive",
-        title: "Document Deleted",
-        description: "The document has been permanently removed.",
+    
+    let docToDelete: Document | undefined;
+    setDocuments(prevDocs => {
+        docToDelete = prevDocs.find(doc => doc.id === documentId);
+        const updatedDocuments = prevDocs.filter(doc => doc.id !== documentId);
+        localStorage.setItem("appDocuments", JSON.stringify(updatedDocuments));
+        return updatedDocuments;
     });
-  };
+
+    if (docToDelete) {
+        const project = projects.find(p => p.id === docToDelete!.projectId);
+        if (project) {
+            addAuditLog(user.username, 'DELETE_DOCUMENT', `Deleted document "${docToDelete.name}" from project "${project.name}".`);
+        }
+        toast({
+            variant: "destructive",
+            title: "Document Deleted",
+            description: "The document has been permanently removed.",
+        });
+    }
+  }, [user, projects, toast]);
   
   /**
-   * Callback function for when a new user is successfully added.
-   * This triggers `loadData` to refetch the user list from the "server"
-   * and closes the "Add User" dialog.
+   * [PERFORMANCE] Callback for when a new user is added.
    */
-  const handleUserAdded = () => {
+  const handleUserAdded = useCallback(() => {
     setIsAddUserDialogOpen(false);
     // Refetch the user data to ensure the UI is up-to-date with the new user.
     loadData();
-  };
+  }, [loadData]);
 
 
   /**

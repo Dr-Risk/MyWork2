@@ -53,6 +53,14 @@ type ProjectCardProps = {
   onDeleteDocument: (documentId: number) => void;
 };
 
+/**
+ * [PERFORMANCE] ProjectCard is wrapped in React.memo.
+ * This is a higher-order component that memoizes the rendered output of the
+ * component. This means React will skip rendering the component and reuse the
+ * last rendered result if its props have not changed. This is a crucial
+ * optimization for list items to prevent the entire list from re-rendering
+ * when only one item's data changes.
+ */
 export const ProjectCard = React.memo(function ProjectCard({
     project,
     documents: projectDocs,
@@ -67,8 +75,8 @@ export const ProjectCard = React.memo(function ProjectCard({
     onDeleteDocument,
 }: ProjectCardProps) {
   
-  const [editingProjectId, setEditingProjectId] = useState<number | null>(null);
-  const [assignTeamProjectId, setAssignTeamProjectId] = useState<number | null>(null);
+  const [isEditingLead, setIsEditingLead] = useState(false);
+  const [isAssigningTeam, setIsAssigningTeam] = useState(false);
   const { toast } = useToast();
 
   const assignedDevsList = users.filter(u => project.assignedDevelopers.includes(u.username));
@@ -104,12 +112,12 @@ export const ProjectCard = React.memo(function ProjectCard({
   // Internal submit handlers to close dialogs
   const handleAssignTeamSubmit = (devs: string[]) => {
     onAssignTeam(project.id, devs);
-    setAssignTeamProjectId(null);
+    setIsAssigningTeam(false);
   };
   
   const handleUpdateLeadSubmit = (newLead: string) => {
     onUpdateProjectLead(project.id, newLead);
-    setEditingProjectId(null);
+    setIsEditingLead(false);
   };
 
   return (
@@ -131,7 +139,7 @@ export const ProjectCard = React.memo(function ProjectCard({
             <p className="text-sm text-muted-foreground">{projectLead?.name || project.lead}</p>
             {/* [PERMISSIONS] The "Change Lead" button is strictly admin-only. */}
             {canEditProject && (
-                <Dialog open={editingProjectId === project.id} onOpenChange={(isOpen) => setEditingProjectId(isOpen ? project.id : null)}>
+                <Dialog open={isEditingLead} onOpenChange={setIsEditingLead}>
                   <DialogTrigger asChild>
                     <Button variant="ghost" size="sm"><Replace className="mr-2 h-4 w-4"/> Change</Button>
                   </DialogTrigger>
@@ -218,7 +226,7 @@ export const ProjectCard = React.memo(function ProjectCard({
       <CardFooter className="grid grid-cols-2 gap-2">
           {/* [PERMISSIONS] The "Assign Team" button is ONLY for the designated Project Lead. */}
           {canAssignTeam && (
-              <Dialog open={assignTeamProjectId === project.id} onOpenChange={(isOpen) => setAssignTeamProjectId(isOpen ? project.id : null)}>
+              <Dialog open={isAssigningTeam} onOpenChange={setIsAssigningTeam}>
                 <DialogTrigger asChild>
                     <Button variant="outline"><UserPlus className="mr-2"/> Assign Team</Button>
                 </DialogTrigger>
