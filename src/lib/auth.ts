@@ -557,8 +557,11 @@ export const unlockUserAccount = async (
  * Permanently removes a user from the system and updates project assignments.
  */
 export const removeUser = async (username: string): Promise<{ success: boolean; message: string }> => {
-    const users = await readUsers();
-    const userToDelete = users[username];
+    // Read the current state of users and projects
+    let allUsers = await readUsers();
+    let allProjects = await readProjects();
+
+    const userToDelete = allUsers[username];
 
     if (!userToDelete) {
         return { success: false, message: "User not found." };
@@ -568,15 +571,14 @@ export const removeUser = async (username: string): Promise<{ success: boolean; 
     }
 
     // Create a new users object without the deleted user.
-    const updatedUsers = { ...users };
-    delete updatedUsers[username];
-    await writeUsers(updatedUsers);
+    delete allUsers[username];
+    
+    // Now, write the updated user list back to the file.
+    await writeUsers(allUsers);
 
     // Now, clean up project assignments.
-    let projects = await readProjects();
     let projectsModified = false;
-
-    const updatedProjects = projects.map(p => {
+    const updatedProjects = allProjects.map(p => {
         let modified = false;
         // If the deleted user was a project lead, unassign them.
         if (p.lead === username) {

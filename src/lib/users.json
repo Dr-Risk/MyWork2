@@ -1,3 +1,4 @@
+
 {
   "moqadri": {
     "username": "moqadri",
@@ -10,56 +11,5 @@
     "isLocked": false,
     "passwordLastChanged": "2025-07-23T12:00:00.000Z",
     "mfaEnabled": false
-  },
-  "Jcena": {
-    "username": "Jcena",
-    "passwordHash": "Jcena@123_hashed",
-    "role": "project-lead",
-    "name": "Jhon Cena",
-    "initials": "JC",
-    "email": "jcena@example.com",
-    "loginAttempts": 0,
-    "isLocked": false,
-    "passwordLastChanged": "2025-07-22T16:30:33.941Z",
-    "mfaEnabled": true,
-    "mfaSecret": "DVXRY3TNHBYRMA2A"
-  },
-  "utaker": {
-    "username": "utaker",
-    "passwordHash": "Utaker123_hashed",
-    "role": "developer",
-    "name": "undertaker",
-    "initials": "U",
-    "email": "utaker@example.com",
-    "loginAttempts": 0,
-    "isLocked": false,
-    "passwordLastChanged": "2025-07-22T16:37:37.649Z",
-    "mfaEnabled": false
-  },
-  "rortan": {
-    "username": "rortan",
-    "passwordHash": "rortan123_hashed",
-    "role": "developer",
-    "name": "randy ortan",
-    "initials": "RO",
-    "email": "rortan@example.com",
-    "loginAttempts": 0,
-    "isLocked": false,
-    "passwordLastChanged": "2025-07-22T17:11:46.734Z",
-    "mfaEnabled": false
-  },
-  "CMpunk": {
-    "username": "CMpunk",
-    "passwordHash": "CMpunk1234_hashed",
-    "role": "developer",
-    "name": "CMpunk",
-    "initials": "C",
-    "email": "cmpunk@example.com",
-    "loginAttempts": 0,
-    "isLocked": false,
-    "passwordLastChanged": "2025-08-03T16:54:02.839Z",
-    "mfaEnabled": true,
-    "mustChangePassword": false,
-    "mfaSecret": "KMDHIHIBC5VUWRQV"
   }
 }
