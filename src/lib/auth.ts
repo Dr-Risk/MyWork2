@@ -558,21 +558,29 @@ export const unlockUserAccount = async (
  */
 export const removeUser = async (username: string): Promise<{ success: boolean; message: string }> => {
     const users = await readUsers();
-    const user = users[username];
-    if (!user) return { success: false, message: "User not found." };
-    if (user.role === 'admin') return { success: false, message: "Cannot remove an admin account." };
+    const userToDelete = users[username];
 
-    delete users[username];
-    await writeUsers(users);
+    if (!userToDelete) {
+        return { success: false, message: "User not found." };
+    }
+    if (userToDelete.role === 'admin') {
+        return { success: false, message: "Cannot remove an admin account." };
+    }
 
-    // Now, clean up project assignments
+    // Create a new users object without the deleted user.
+    const updatedUsers = { ...users };
+    delete updatedUsers[username];
+    await writeUsers(updatedUsers);
+
+    // Now, clean up project assignments.
     let projects = await readProjects();
     let projectsModified = false;
-    projects = projects.map(p => {
+
+    const updatedProjects = projects.map(p => {
         let modified = false;
         // If the deleted user was a project lead, unassign them.
         if (p.lead === username) {
-            p.lead = ''; // Or set to a default, depending on business rules
+            p.lead = ''; // Or set to a default, depending on business rules.
             modified = true;
         }
         // If the deleted user was an assigned developer, remove them from the list.
@@ -580,21 +588,16 @@ export const removeUser = async (username: string): Promise<{ success: boolean; 
             p.assignedDevelopers = p.assignedDevelopers.filter(dev => dev !== username);
             modified = true;
         }
-        if (modified) projectsModified = true;
+        if (modified) {
+            projectsModified = true;
+        }
         return p;
     });
 
-    // If any project was changed, write the updated project data back to the "database".
     if (projectsModified) {
-        // In a real DB, this would be a single transaction.
-        // For our mock, we just write the whole file again.
-        await writeProjects(projects);
-        // Persist to the main app's localStorage copy as well
-        if (typeof localStorage !== 'undefined') {
-            localStorage.setItem("appProjects", JSON.stringify(projects));
-        }
+        await writeProjects(updatedProjects);
     }
-
+    
     await addAuditLog('admin', 'DELETE_USER', `Admin permanently removed user '${username}' and updated project assignments.`);
     logger.info(`User '${username}' removed from the system by an admin. Project assignments cleaned up.`);
     return { success: true, message: "User removed successfully." };
