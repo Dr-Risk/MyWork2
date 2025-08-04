@@ -1,4 +1,3 @@
-
 [
   {
     "id": 1754321798075,
@@ -41,5 +40,12 @@
     "username": "admin",
     "action": "DELETE_USER",
     "details": "Admin permanently removed user 'utaker' and updated project assignments."
+  },
+  {
+    "id": 1754322644115,
+    "timestamp": "2025-08-04T15:50:44.115Z",
+    "username": "moqadri",
+    "action": "LOGIN_SUCCESS",
+    "details": "User logged in successfully."
   }
 ]
