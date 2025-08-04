@@ -115,34 +115,47 @@ let projectsCache: Project[] | null = null;
 let usersCache: { [key: string]: UserWithPassword } | null = null;
 
 
+// Default admin user, to be used if the users.json file doesn't exist.
+const defaultUsers: { [key: string]: UserWithPassword } = {
+    "moqadri": {
+        "username": "moqadri",
+        "passwordHash": "DefaultPassword123_hashed",
+        "role": "admin",
+        "name": "Mo Qadri",
+        "initials": "MQ",
+        "email": "mo.qadri@example.com",
+        "loginAttempts": 0,
+        "isLocked": false,
+        "passwordLastChanged": new Date().toISOString(),
+        "mfaEnabled": false
+    }
+};
+
 /**
  * Reads all users from the users.json file, using a cache to avoid redundant reads.
+ * If the file doesn't exist, it creates it with a default admin user.
  * @returns A promise that resolves to the user data object.
  */
 const readUsers = async (): Promise<{ [key: string]: UserWithPassword }> => {
-    // If the cache is populated, return it immediately.
     if (usersCache) {
         return usersCache;
     }
 
     try {
-        // Check if the file exists before attempting to read.
-        if (fs.existsSync(dbPath)) {
-            const data = await fs.promises.readFile(dbPath, 'utf-8');
-            // Prevent parsing empty files which would cause an error.
-            if (data) {
-                usersCache = JSON.parse(data);
-            } else {
-                usersCache = {};
-            }
-        } else {
-            // If the file does not exist, initialize with an empty object.
-             usersCache = {};
+        if (!fs.existsSync(dbPath)) {
+            // [FIX] If the file does not exist, create it with the default admin user.
+            // This is the critical fix to ensure data persistence from the start.
+            logger.warn(`users.json not found. Creating with default admin user.`);
+            await writeUsers(defaultUsers);
+            usersCache = defaultUsers;
+            return usersCache;
         }
+
+        const data = await fs.promises.readFile(dbPath, 'utf-8');
+        usersCache = data ? JSON.parse(data) : {};
     } catch (error) {
-        logger.error('Error reading or parsing users.json. Falling back to an empty user list.', error);
-        // In case of a read or parse error, default to an empty object to prevent crashes.
-        usersCache = {};
+        logger.error('Error reading or parsing users.json. Falling back to default.', error);
+        usersCache = defaultUsers;
     }
     return usersCache!;
 };
