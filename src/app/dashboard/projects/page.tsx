@@ -20,6 +20,7 @@ import { initialProjects, initialDocuments } from "@/lib/projects";
 import type { Project, Document } from "@/lib/projects";
 import { useToast } from "@/hooks/use-toast";
 import { getUsers as getAllUsers, type SanitizedUser } from "@/lib/auth";
+import { addAuditLog } from "@/lib/audit-log";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -102,7 +103,10 @@ export default function AllProjectsPage() {
    * Handles marking a project as "Completed".
    */
   const handleCompleteProject = (projectId: number) => {
+    const project = projects.find(p => p.id === projectId);
+    if (!project || !user) return;
     setProjects(prev => prev.map(p => p.id === projectId ? { ...p, status: "Completed" } : p));
+    addAuditLog(user.username, 'COMPLETE_PROJECT', `Marked project as complete: "${project.name}".`);
     toast({ title: "Project Updated", description: "Project marked as complete." });
   };
 
@@ -111,8 +115,12 @@ export default function AllProjectsPage() {
    * [PERMISSIONS] This is an admin-only action.
    */
   const handleDeleteProject = (projectId: number) => {
+    const project = projects.find(p => p.id === projectId);
+    if (!project || !user) return;
+    
     setProjects(prev => prev.filter(p => p.id !== projectId));
     setDocuments(prev => prev.filter(d => d.projectId !== projectId));
+    addAuditLog(user.username, 'DELETE_PROJECT', `Permanently deleted project: "${project.name}".`);
     toast({ variant: "destructive", title: "Project Deleted", description: "The project has been permanently removed." });
   };
   
@@ -247,5 +255,3 @@ export default function AllProjectsPage() {
     </>
   );
 }
-
-    

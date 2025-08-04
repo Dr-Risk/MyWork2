@@ -22,6 +22,7 @@ import fs from 'fs';
 import path from 'path';
 import { logger } from './logger';
 import { generateMfaQrCode, generateMfaSecret, verifyMfaToken } from './mfa';
+import { addAuditLog } from "./audit-log";
 
 // Path to the mock database file
 const dbPath = path.join(process.cwd(), 'src', 'lib', 'users.json');
@@ -238,6 +239,10 @@ export const createUser = async (
     // Write the updated object to the file and refresh the cache.
     await writeUsers(updatedUsers);
 
+    // Audit this action.
+    // In a real app, you'd get the admin username from the session. For this mock, we'll hardcode it.
+    await addAuditLog('admin', 'CREATE_USER', `Admin created new user: ${userData.username} with role ${userData.role}.`);
+
     logger.info(`User '${userData.username}' created successfully.`);
     return { success: true, message: "User created successfully." };
 };
@@ -306,6 +311,7 @@ export const checkCredentials = async (username: string, pass: string): Promise<
   // 3. Check if account is locked.
   if (user.isLocked) {
     logger.warn(`Login attempt for locked account: ${username}`);
+    await addAuditLog(username, 'LOGIN_FAILURE', `Attempted login to locked account.`);
     return { status: 'locked', message: 'Your account is locked due to too many failed login attempts.' };
   }
 
@@ -319,10 +325,12 @@ export const checkCredentials = async (username: string, pass: string): Promise<
       user.loginAttempts++;
       if (user.loginAttempts >= MAX_LOGIN_ATTEMPTS) {
         user.isLocked = true;
+        await addAuditLog(username, 'ACCOUNT_LOCKED', `Account locked after ${MAX_LOGIN_ATTEMPTS} failed login attempts.`);
         logger.warn(`Account for user '${username}' has been locked due to excessive login attempts.`);
       }
       await writeUsers(users); // Save updated attempts/lock status.
     }
+    await addAuditLog(username, 'LOGIN_FAILURE', `Failed login attempt (invalid password).`);
     return { status: 'invalid', message: 'Invalid username or password.' };
   }
   
@@ -352,6 +360,7 @@ export const checkCredentials = async (username: string, pass: string): Promise<
   logger.info(`Successful login for user: ${username}`);
   user.loginAttempts = 0;
   await writeUsers(users);
+  await addAuditLog(username, 'LOGIN_SUCCESS', `User logged in successfully.`);
   
   // [SECURITY] Data Minimization
   // Only return the non-sensitive UserProfile, not the internal UserWithPassword.
@@ -404,8 +413,10 @@ export const updateUserRole = async (
   // Prevent changing the role of the admin user.
   if (user.role === 'admin') return { success: false, message: 'Cannot change the role of an admin user.' };
 
+  const oldRole = user.role;
   user.role = newRole;
   await writeUsers(users);
+  await addAuditLog('admin', 'UPDATE_ROLE', `Admin changed role for user '${username}' from '${oldRole}' to '${newRole}'.`);
   logger.info(`User '${username}' role updated to '${newRole}'.`);
   return { success: true, message: 'User role updated successfully.' };
 };
@@ -427,6 +438,7 @@ export const updateUserProfile = async (
   user.initials = (data.name.match(/\b\w/g) || []).join('').toUpperCase() || '??';
   await writeUsers(users);
 
+  await addAuditLog(username, 'UPDATE_PROFILE', `User updated their name and email.`);
   logger.info(`User '${username}' profile updated.`);
   const { passwordHash, loginAttempts, isLocked, passwordLastChanged, mfaSecret, mustChangePassword, ...userProfile } = user;
   return { success: true, message: 'Profile updated successfully.', user: userProfile };
@@ -458,7 +470,7 @@ export const updateUserPassword = async (
         user.mustChangePassword = false;
     }
     await writeUsers(users);
-
+    await addAuditLog(username, 'PASSWORD_CHANGE', `User successfully changed their password.`);
     logger.info(`User '${username}' password updated successfully.`);
     return { success: true, message: "Password updated successfully." };
 }
@@ -482,6 +494,7 @@ export const updateUserPasswordWithTempToken = async (
     user.mustChangePassword = false; // Clear the flag.
     await writeUsers(users);
 
+    await addAuditLog(username, 'PASSWORD_RESET', `User successfully changed their password after forced reset.`);
     logger.info(`User '${username}' password updated successfully via temporary token flow.`);
     return { success: true, message: "Password updated successfully." };
 }
@@ -503,6 +516,7 @@ export const lockUserAccount = async (
 
   user.isLocked = true;
   await writeUsers(users);
+  await addAuditLog('admin', 'ACCOUNT_LOCKED', `Admin manually locked account for user '${username}'.`);
   logger.info(`User account for '${username}' has been manually locked by an admin.`);
   return { success: true, message: 'User account locked successfully.' };
 };
@@ -521,6 +535,7 @@ export const unlockUserAccount = async (
   user.isLocked = false;
   user.loginAttempts = 0; 
   await writeUsers(users);
+  await addAuditLog('admin', 'ACCOUNT_UNLOCKED', `Admin manually unlocked account for user '${username}'.`);
   logger.info(`User account for '${username}' has been manually unlocked by an admin.`);
   return { success: true, message: 'User account unlocked successfully.' };
 };
@@ -539,6 +554,7 @@ export const removeUser = async (
 
     delete users[username];
     await writeUsers(users);
+    await addAuditLog('admin', 'DELETE_USER', `Admin permanently removed user '${username}'.`);
     logger.info(`User '${username}' removed from the system by an admin.`);
     return { success: true, message: "User removed successfully." };
 };
@@ -593,7 +609,7 @@ export const confirmMfa = async (username: string, token: string): Promise<{ suc
     user.mfaEnabled = true;
     // The secret is now permanently stored.
     await writeUsers(users);
-
+    await addAuditLog(username, 'MFA_ENABLED', `User successfully enabled MFA.`);
     logger.info(`MFA enabled for user '${username}'.`);
     const { passwordHash, loginAttempts, isLocked, passwordLastChanged, mfaSecret, mustChangePassword, ...userProfile } = user;
     return { success: true, message: 'MFA enabled successfully!', user: userProfile };
@@ -610,7 +626,7 @@ export const disableMfa = async (username: string): Promise<{ success: boolean; 
     user.mfaEnabled = false;
     delete user.mfaSecret; // Remove the secret.
     await writeUsers(users);
-
+    await addAuditLog(username, 'MFA_DISABLED', `User disabled MFA.`);
     logger.info(`MFA disabled for user '${username}'.`);
     const { passwordHash, loginAttempts, isLocked, passwordLastChanged, mfaSecret, mustChangePassword, ...userProfile } = user;
     return { success: true, message: 'MFA has been disabled.', user: userProfile };
@@ -632,6 +648,7 @@ export const loginWithMfa = async (username: string, token: string): Promise<Aut
     
     if (!isValid) {
         logger.warn(`MFA login failed for user '${username}' with invalid token.`);
+        await addAuditLog(username, 'LOGIN_FAILURE', `Failed MFA login attempt (invalid token).`);
         return { status: 'invalid', message: 'Invalid authenticator code.' };
     }
 
@@ -639,6 +656,7 @@ export const loginWithMfa = async (username: string, token: string): Promise<Aut
     user.loginAttempts = 0;
     await writeUsers(users);
     
+    await addAuditLog(username, 'LOGIN_SUCCESS', `User logged in successfully with MFA.`);
     logger.info(`Successful MFA login for user: ${username}`);
     const { passwordHash, loginAttempts, isLocked, passwordLastChanged, mfaSecret, mustChangePassword, ...userProfile } = user;
     return { status: 'success', user: userProfile };

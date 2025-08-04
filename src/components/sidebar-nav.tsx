@@ -8,6 +8,7 @@ import {
   Users,
   Settings,
   FolderKanban,
+  BookLock,
 } from "lucide-react";
 import { useAuth } from "@/context/auth-context";
 import { Skeleton } from "./ui/skeleton";
@@ -31,6 +32,7 @@ export function SidebarNav() {
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, roles: ['admin', 'project-lead', 'developer'] },
     { href: "/dashboard/projects", label: "All Projects", icon: FolderKanban, roles: ['admin'] },
     { href: "/dashboard/users", label: "User Management", icon: Users, roles: ['admin'] },
+    { href: "/dashboard/audit-log", label: "Audit Log", icon: BookLock, roles: ['admin'] },
     { href: "/dashboard/profile", label: "Account Settings", icon: Settings, roles: ['admin', 'project-lead', 'developer'] },
   ];
 

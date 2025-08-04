@@ -22,6 +22,7 @@ import { useToast } from "@/hooks/use-toast";
 import { AddUserForm } from "@/components/add-user-form";
 import { getUsers as getAllUsers, type SanitizedUser, getDevelopers } from "@/lib/auth";
 import { ProjectCard } from "@/components/project-card";
+import { addAuditLog } from "@/lib/audit-log";
 
 /**
  * @fileoverview Main Dashboard Page for PixelForge Nexus
@@ -88,12 +89,15 @@ export default function DashboardPage() {
    * closes the "Add Project" dialog, and shows a success toast.
    */
   const handleAddProject = (newProject: Omit<Project, 'id' | 'status'>) => {
+    if (!user) return;
+    const projectToAdd = { ...newProject, id: Date.now(), status: "Active" as const };
     const updatedProjects = [
-      { ...newProject, id: Date.now(), status: "Active" as const },
+      projectToAdd,
       ...projects
     ];
     setProjects(updatedProjects);
     localStorage.setItem("appProjects", JSON.stringify(updatedProjects));
+    addAuditLog(user.username, 'CREATE_PROJECT', `Created project: "${projectToAdd.name}".`);
     setIsAddProjectOpen(false);
     toast({ title: "Project Created", description: `"${newProject.name}" has been added.` });
   };
@@ -103,9 +107,14 @@ export default function DashboardPage() {
    * It finds the project by its ID and updates its status.
    */
   const handleCompleteProject = (projectId: number) => {
+    if (!user) return;
+    const project = projects.find(p => p.id === projectId);
+    if (!project) return;
+
     const updatedProjects = projects.map(p => p.id === projectId ? { ...p, status: "Completed" as const } : p);
     setProjects(updatedProjects);
     localStorage.setItem("appProjects", JSON.stringify(updatedProjects));
+    addAuditLog(user.username, 'COMPLETE_PROJECT', `Marked project as complete: "${project.name}".`);
     toast({ title: "Project Updated", description: "Project marked as complete." });
   };
 
@@ -114,6 +123,10 @@ export default function DashboardPage() {
    * This function now REPLACES the existing developer list with the new one.
    */
   const handleAssignTeam = (projectId: number, assignedUsernames: string[]) => {
+     if (!user) return;
+     const project = projects.find(p => p.id === projectId);
+     if (!project) return;
+
      const updatedProjects = projects.map(p => {
         if (p.id === projectId) {
             // Replace the old list of developers with the newly submitted list.
@@ -123,6 +136,7 @@ export default function DashboardPage() {
     });
     setProjects(updatedProjects);
     localStorage.setItem("appProjects", JSON.stringify(updatedProjects));
+    addAuditLog(user.username, 'ASSIGN_TEAM', `Updated team for project "${project.name}". Assigned: ${assignedUsernames.join(', ') || 'None'}.`);
     toast({ title: "Team Updated", description: "The project team has been updated." });
   };
   
@@ -130,6 +144,10 @@ export default function DashboardPage() {
    * Handles updating the project lead for a specific project.
    */
   const handleUpdateProjectLead = (projectId: number, newLeadUsername: string) => {
+    if (!user) return;
+    const project = projects.find(p => p.id === projectId);
+    if (!project) return;
+    
     const updatedProjects = projects.map(p => {
         if (p.id === projectId) {
             return { ...p, lead: newLeadUsername };
@@ -138,6 +156,7 @@ export default function DashboardPage() {
     });
     setProjects(updatedProjects);
     localStorage.setItem("appProjects", JSON.stringify(updatedProjects));
+    addAuditLog(user.username, 'UPDATE_LEAD', `Changed project lead for "${project.name}" to ${newLeadUsername}.`);
     toast({ title: "Project Lead Updated", description: "The project lead has been changed." });
   };
 
@@ -146,6 +165,10 @@ export default function DashboardPage() {
    * This ensures the file content is stored and persists in localStorage.
    */
   const handleFileUpload = (projectId: number, file: File) => {
+    if (!user) return;
+    const project = projects.find(p => p.id === projectId);
+    if (!project) return;
+
     const reader = new FileReader();
     reader.onload = (event) => {
       if (event.target?.result) {
@@ -158,6 +181,7 @@ export default function DashboardPage() {
         const updatedDocuments = [newDocument, ...documents];
         setDocuments(updatedDocuments);
         localStorage.setItem("appDocuments", JSON.stringify(updatedDocuments));
+        addAuditLog(user.username, 'UPLOAD_DOCUMENT', `Uploaded document "${file.name}" to project "${project.name}".`);
         toast({ title: "File Uploaded", description: `"${file.name}" has been added to the project.` });
       }
     };
@@ -169,9 +193,19 @@ export default function DashboardPage() {
    * [PERMISSIONS] This action is restricted to Admins and Project Leads.
    */
   const handleDeleteDocument = (documentId: number) => {
+    if (!user) return;
+    const docToDelete = documents.find(doc => doc.id === documentId);
+    if (!docToDelete) return;
+    const project = projects.find(p => p.id === docToDelete.projectId);
+
     const updatedDocuments = documents.filter(doc => doc.id !== documentId);
     setDocuments(updatedDocuments);
     localStorage.setItem("appDocuments", JSON.stringify(updatedDocuments));
+
+    if (project) {
+        addAuditLog(user.username, 'DELETE_DOCUMENT', `Deleted document "${docToDelete.name}" from project "${project.name}".`);
+    }
+
     toast({
         variant: "destructive",
         title: "Document Deleted",
