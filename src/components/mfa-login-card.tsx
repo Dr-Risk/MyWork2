@@ -5,7 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useAuth } from "@/context/auth-context";
 import { useToast } from "@/hooks/use-toast";
 import { loginWithMfa, type UserProfile } from "@/lib/auth";
@@ -50,17 +50,31 @@ export function MfaLoginCard({ user }: MfaLoginCardProps) {
   const { toast } = useToast();
   const { setUser } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
+  const formRef = useRef<HTMLFormElement>(null);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: { token: "" },
   });
 
+  const tokenValue = form.watch("token");
+
+  useEffect(() => {
+    // When the token reaches 6 characters, automatically submit the form.
+    if (tokenValue.length === 6 && formRef.current) {
+      // We use a direct submit call on the form element to avoid re-render loops.
+      formRef.current.requestSubmit();
+    }
+  }, [tokenValue]);
+
   /**
    * Handles the form submission to verify the MFA code.
    * @param {object} values The validated form values.
    */
   async function onSubmit(values: z.infer<typeof formSchema>) {
+    // Prevent multiple submissions while one is in progress.
+    if (isLoading) return;
+    
     setIsLoading(true);
     const response = await loginWithMfa(user.username, values.token);
     setIsLoading(false);
@@ -92,7 +106,7 @@ export function MfaLoginCard({ user }: MfaLoginCardProps) {
       </CardHeader>
       <CardContent>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <form ref={formRef} onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <FormField
               control={form.control}
               name="token"
@@ -100,7 +114,13 @@ export function MfaLoginCard({ user }: MfaLoginCardProps) {
                 <FormItem>
                   <FormLabel>6-Digit Code</FormLabel>
                   <FormControl>
-                    <Input placeholder="123456" {...field} type="text" />
+                    <Input 
+                      placeholder="123456" 
+                      {...field} 
+                      type="text" 
+                      autoComplete="one-time-code"
+                      maxLength={6}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
