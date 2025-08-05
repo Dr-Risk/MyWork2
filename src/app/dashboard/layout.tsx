@@ -16,6 +16,7 @@ import {
 import { useAuth } from "@/context/auth-context";
 import { cn } from "@/lib/utils";
 import { Sidebar, SidebarContent, SidebarHeader, SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { Badge } from "@/components/ui/badge";
 
 /**
  * @fileoverview Main Dashboard Layout for PixelForge Nexus
@@ -78,8 +79,9 @@ export default function DashboardLayout({
         <header className="flex h-14 items-center gap-4 border-b bg-card px-4 lg:h-[60px] lg:px-6">
           {/* A trigger to open the sidebar on mobile devices. */}
           <SidebarTrigger className="md:hidden" />
-          <div className="w-full flex-1">
+          <div className="w-full flex-1 flex items-center gap-2">
              <span className="text-sm font-semibold">Welcome, {user.name}</span>
+             <Badge variant="outline" className="capitalize">{user.role.replace('-', ' ')}</Badge>
           </div>
           {/* The user navigation dropdown (profile, settings, logout). */}
           <UserNav />
