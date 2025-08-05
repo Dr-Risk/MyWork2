@@ -54,5 +54,12 @@
     "username": "moqadri",
     "action": "LOGIN_SUCCESS",
     "details": "User logged in successfully."
+  },
+  {
+    "id": 1754356759105,
+    "timestamp": "2025-08-05T01:19:19.105Z",
+    "username": "moqadri",
+    "action": "LOGIN_SUCCESS",
+    "details": "User logged in successfully."
   }
 ]
